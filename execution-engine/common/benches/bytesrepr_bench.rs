@@ -215,6 +215,18 @@ fn key_bench(c: &mut Criterion) {
         b.iter(|| Key::from_bytes(black_box(&uref_bytes)))
     });
 
+    let keys: Vec<Key> = (0..32)
+        .map(|i| Key::URef([i; 32], AccessRights::AddWrite))
+        .collect();
+    let keys_bytes = keys.clone().to_bytes().unwrap();
+
+    c.bench_function("serialize vec of keys", move |b| {
+        b.iter(|| ToBytes::to_bytes(black_box(&keys)))
+    });
+    c.bench_function("deserialize vec of keys", move |b| {
+        b.iter(|| Vec::<Key>::from_bytes(black_box(&keys_bytes)))
+    });
+
     let permissions = vec![
         AccessRights::Eqv,
         AccessRights::Read,
@@ -314,7 +326,6 @@ fn contract_bench(c: &mut Criterion) {
     c.bench_function("deserialize contract", move |b| {
         b.iter(|| Contract::from_bytes(black_box(&contract_bytes)))
     });
-
 }
 
 fn uint_bench(c: &mut Criterion) {
