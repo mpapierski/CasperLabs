@@ -15,3 +15,8 @@ shared = { path = "../shared" }
 [dev-dependencies]
 proptest = "0.9.2"
 tempfile = "3"
+criterion = "0.2.11"
+
+[[bench]]
+name = "trie_bench"
+harness = false
