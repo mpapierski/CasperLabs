@@ -206,7 +206,7 @@ fn key_bench(c: &mut Criterion) {
         b.iter(|| Key::from_bytes(black_box(&hash_bytes)))
     });
 
-    let uref = Key::URef([0u8; 32], AccessRights::AddWrite);
+    let uref = Key::URef([0u8; 32], AccessRights::ADD_WRITE);
     c.bench_function("serialize key uref", move |b| {
         b.iter(|| ToBytes::to_bytes(black_box(&uref)))
     });
@@ -216,7 +216,7 @@ fn key_bench(c: &mut Criterion) {
     });
 
     let keys: Vec<Key> = (0..32)
-        .map(|i| Key::URef([i; 32], AccessRights::AddWrite))
+        .map(|i| Key::URef([i; 32], AccessRights::ADD_WRITE))
         .collect();
     let keys_bytes = keys.clone().to_bytes().unwrap();
 
@@ -228,13 +228,12 @@ fn key_bench(c: &mut Criterion) {
     });
 
     let permissions = vec![
-        AccessRights::Eqv,
-        AccessRights::Read,
-        AccessRights::Write,
-        AccessRights::Add,
-        AccessRights::ReadAdd,
-        AccessRights::ReadWrite,
-        AccessRights::AddWrite,
+        AccessRights::READ,
+        AccessRights::WRITE,
+        AccessRights::ADD,
+        AccessRights::READ_ADD,
+        AccessRights::READ_WRITE,
+        AccessRights::ADD_WRITE,
     ];
     c.bench(
         "access rights",
@@ -248,12 +247,12 @@ fn key_bench(c: &mut Criterion) {
 
 fn make_known_urefs() -> BTreeMap<String, Key> {
     let mut urefs = BTreeMap::new();
-    urefs.insert("ref1".to_string(), Key::URef([0u8; 32], AccessRights::Read));
+    urefs.insert("ref1".to_string(), Key::URef([0u8; 32], AccessRights::READ));
     urefs.insert(
         "ref2".to_string(),
-        Key::URef([1u8; 32], AccessRights::Write),
+        Key::URef([1u8; 32], AccessRights::WRITE),
     );
-    urefs.insert("ref3".to_string(), Key::URef([2u8; 32], AccessRights::Add));
+    urefs.insert("ref3".to_string(), Key::URef([2u8; 32], AccessRights::ADD));
     urefs
 }
 
