@@ -73,6 +73,12 @@ pipeline:
     commands:
       - sbt compile test:compile doc
 
+  git-status-post-scala-compile:
+    <<: *buildenv
+    commands: |
+      STATUS_CHECK=$(git status)
+      if echo $STATUS_CHECK | grep -q "modified" ; then echo "$STATUS_CHECK"; exit 1; fi
+
   compile-rust:
     <<: *buildenv
     commands:
@@ -305,6 +311,15 @@ pipeline:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     secrets: [ docker_username, docker_password ]
+    when:
+      event: [ push, tag ]
+
+  contract-examples:
+    image: plugins/downstream
+    secrets: [ downstream_token, downstream_server ]
+    fork: true
+    repositories:
+      - CasperLabs/contract-examples@master
     when:
       event: [ push, tag ]
 
