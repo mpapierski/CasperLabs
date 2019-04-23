@@ -26,7 +26,7 @@ fn prepare_vector(size: usize) -> Vec<i32> {
 }
 
 fn bytesrepr_bench(c: &mut Criterion) {
-    let batch = 16 * KB;
+    let batch = 4 * KB;
 
     c.bench_function("serialize vector of i32s", move |b| {
         b.iter_batched_ref(
@@ -114,12 +114,12 @@ fn bytesrepr_bench(c: &mut Criterion) {
         b.iter(|| Option::<u64>::from_bytes(&data))
     });
 
-    let raw_data: Vec<Vec<u8>> = (0..16)
+    let raw_data: Vec<Vec<u8>> = (0..4)
         .map(|_v| {
             // 0, 1, 2, ..., 254, 255
             iter::repeat_with(|| 0..255u8)
                 .flatten()
-                // 4 times to create 16x 1024 bytes
+                // 4 times to create 4x 1024 bytes
                 .take(4)
                 .collect::<Vec<_>>()
         })
