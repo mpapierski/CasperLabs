@@ -76,27 +76,27 @@ fn bytesrepr_bench(c: &mut Criterion) {
     });
 
     c.bench_function("serialize i32", |b| {
-        b.iter(|| ToBytes::to_bytes(black_box(&1816142132i32)))
+        b.iter(|| ToBytes::to_bytes(black_box(&1_816_142_132i32)))
     });
     c.bench_function("deserialize i32", |b| {
         b.iter(|| i32::from_bytes(black_box(&[0x34, 0x21, 0x40, 0x6c])))
     });
 
     c.bench_function("serialize u64", |b| {
-        b.iter(|| ToBytes::to_bytes(black_box(&14157907845468752670u64)))
+        b.iter(|| ToBytes::to_bytes(black_box(&14_157_907_845_468_752_670u64)))
     });
     c.bench_function("deserialize u64", |b| {
         b.iter(|| u64::from_bytes(black_box(&[0x1e, 0x8b, 0xe1, 0x73, 0x2c, 0xfe, 0x7a, 0xc4])))
     });
 
     c.bench_function("serialize u64", |b| {
-        b.iter(|| ToBytes::to_bytes(black_box(&14157907845468752670u64)))
+        b.iter(|| ToBytes::to_bytes(black_box(&14_157_907_845_468_752_670u64)))
     });
     c.bench_function("deserialize u64", |b| {
         b.iter(|| u64::from_bytes(black_box(&[0x1e, 0x8b, 0xe1, 0x73, 0x2c, 0xfe, 0x7a, 0xc4])))
     });
 
-    let data = Some(14157907845468752670u64);
+    let data = Some(14_157_907_845_468_752_670u64);
     c.bench_function("serialize ok(u64)", move |b| {
         b.iter(|| ToBytes::to_bytes(black_box(&data)))
     });
@@ -147,7 +147,7 @@ fn bytesrepr_bench(c: &mut Criterion) {
         res
     };
     c.bench_function("serialize tree map", |b| {
-        b.iter(|| ToBytes::to_bytes(black_box(&14157907845468752670u64)))
+        b.iter(|| ToBytes::to_bytes(black_box(&14_157_907_845_468_752_670u64)))
     });
 
     let data = data.clone().to_bytes().unwrap();
@@ -166,7 +166,7 @@ fn bytesrepr_bench(c: &mut Criterion) {
         b.iter(|| String::from_bytes(&data))
     });
 
-    let array_of_lorem: Vec<String> = lorem.split(" ").map(Into::into).collect();
+    let array_of_lorem: Vec<String> = lorem.split(' ').map(Into::into).collect();
     let data = array_of_lorem.clone();
     c.bench_function("serialize vec of string", move |b| {
         b.iter(|| ToBytes::to_bytes(black_box(&data)))
@@ -263,7 +263,7 @@ fn make_contract() -> Contract {
 
 fn make_account() -> Account {
     let known_urefs = make_known_urefs();
-    Account::new([0u8; 32], 2635333365164409670u64, known_urefs)
+    Account::new([0u8; 32], 2_635_333_365_164_409_670u64, known_urefs)
 }
 
 fn account_bench(c: &mut Criterion) {
@@ -281,10 +281,10 @@ fn account_bench(c: &mut Criterion) {
 
 fn value_bench(c: &mut Criterion) {
     let values = vec![
-        Value::Int32(123456789i32),
-        Value::UInt128(123456789u128.into()),
-        Value::UInt256(123456789u64.into()),
-        Value::UInt512(12345679u64.into()),
+        Value::Int32(123_456_789i32),
+        Value::UInt128(123_456_789u128.into()),
+        Value::UInt256(123_456_789u64.into()),
+        Value::UInt512(12_345_679u64.into()),
         Value::ByteArray((0..255).collect()),
         Value::ListInt32((0..1024).collect()),
         Value::String("Hello, world!".to_string()),
