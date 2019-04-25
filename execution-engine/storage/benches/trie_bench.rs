@@ -8,13 +8,15 @@ use criterion::black_box;
 use criterion::Criterion;
 
 use common::bytesrepr::{FromBytes, ToBytes};
+use common::key::Key;
+use common::value::Value;
 use shared::newtypes::Blake2bHash;
 use storage::history::trie::{Pointer, PointerBlock, Trie};
 
 fn trie_bench(c: &mut Criterion) {
     let leaf = Trie::Leaf {
-        key: "foo".to_string(),
-        value: "bar".to_string(),
+        key: Key::Account([0; 20]),
+        value: Value::Int32(42),
     };
     let leaf_bytes = leaf.to_bytes().unwrap();
 
