@@ -174,7 +174,7 @@ where
         deserialize(&bytes).map_err(|e| Error::BytesRepr(e).into())
     }
 
-    fn get_function_by_name(&mut self, name_ptr: u32, name_size: u32) -> Result<Vec<u8>, Trap> {
+    pub fn get_function_by_name(&mut self, name_ptr: u32, name_size: u32) -> Result<Vec<u8>, Trap> {
         let name = self.string_from_mem(name_ptr, name_size)?;
 
         let has_name: bool = self
@@ -746,7 +746,7 @@ impl ModuleImportResolver for RuntimeModuleImportResolver {
     }
 }
 
-fn instance_and_memory(parity_module: Module) -> Result<(ModuleRef, MemoryRef), Error> {
+pub fn instance_and_memory(parity_module: Module) -> Result<(ModuleRef, MemoryRef), Error> {
     let module = wasmi::Module::from_parity_wasm_module(parity_module)?;
     let resolver = RuntimeModuleImportResolver::new();
     let mut imports = ImportsBuilder::new();

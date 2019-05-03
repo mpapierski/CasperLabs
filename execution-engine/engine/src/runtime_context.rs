@@ -827,4 +827,79 @@ mod tests {
         let query_result = test(known_urefs, |mut rc| rc.add_gs(uref_key, Value::Int32(1)));
         assert_invalid_access(query_result, AccessRights::ADD);
     }
+
+    use common::bytesrepr::ToBytes;
+    use execution::{instance_and_memory, Runtime};
+    use parity_wasm::elements::Module;
+    use wasmi::memory_units::Pages;
+    use wasmi::MemoryInstance;
+
+    #[test]
+    fn verify_get_function_by_name() {
+        let base_acc_addr = [0u8; 20];
+        let (key, account) = mock_account(base_acc_addr);
+        let mut uref_map = BTreeMap::new();
+        let chacha_rng = create_rng(&base_acc_addr, 0, 0);
+
+        let known_urefs = HashMap::new();
+        let runtime_context =
+            mock_runtime_context(&account, key, &mut uref_map, known_urefs, chacha_rng);
+
+        let wat = r#"
+            (module
+                (func (export "add") (param i32 i32) (result i32)
+                    get_local 0
+                    get_local 1
+                    i32.add
+                )
+            )
+            "#;
+
+        let parity_module: Module = {
+            let wasm_binary = wabt::wat2wasm(wat).expect("failed to parse wat");
+            parity_wasm::deserialize_buffer(&wasm_binary)
+                .expect("Failed to deserialize bytes to Wasm module.")
+        };
+
+        // Allocate some memory
+        let memory = MemoryInstance::alloc(Pages(1024), Some(Pages(1024 * 16))).expect("alloc");
+
+        // Write an "add" string ABI-encoded
+        let add_fn_data = "add".to_bytes().unwrap();
+        memory.set(123, &add_fn_data).unwrap();
+
+        let mut runtime = Runtime::new(memory, parity_module, runtime_context);
+
+        // Lookup at offset 123
+        let add_fn1 = runtime
+            .get_function_by_name(123, add_fn_data.len() as u32)
+            .unwrap();
+        let add_fn2 = runtime
+            .get_function_by_name(123, add_fn_data.len() as u32)
+            .unwrap();
+
+        assert_eq!(
+            add_fn1,
+            vec![
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 7, 1, 96, 2, 127, 127, 1, 127, 3, 2, 1, 0, 7, 8, 1,
+                4, 99, 97, 108, 108, 0, 0, 10, 9, 1, 7, 0, 32, 0, 32, 1, 106, 11
+            ]
+        );
+        assert_eq!(
+            add_fn2,
+            vec![
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 7, 1, 96, 2, 127, 127, 1, 127, 3, 2, 1, 0, 7, 8, 1,
+                4, 99, 97, 108, 108, 0, 0, 10, 9, 1, 7, 0, 32, 0, 32, 1, 106, 11
+            ]
+        );
+
+        // Store and retrieve contract
+
+        let fn_bytes: Vec<u8> = (0..255).collect();
+        let hash1 = runtime
+            .store_function(fn_bytes.clone(), BTreeMap::new())
+            .unwrap();
+        let hash2 = runtime.store_function(fn_bytes, BTreeMap::new()).unwrap();
+        assert_ne!(hash1, hash2);
+    }
 }

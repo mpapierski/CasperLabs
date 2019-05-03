@@ -119,15 +119,16 @@ impl History for InMemHist<Key, Value> {
 
 #[cfg(test)]
 mod tests {
+    use common::value::{self, Account, Contract, Value};
     use global_state::inmem::*;
+    use shared::newtypes::Validated;
     use std::sync::Arc;
     use transform::Transform;
-
     const KEY1: Key = Key::Account([1u8; 20]);
     const KEY2: Key = Key::Account([2u8; 20]);
     const VALUE1: Value = Value::Int32(1);
     const VALUE2: Value = Value::Int32(2);
-
+    use common::key::{AccessRights, Key};
     fn prepopulated_hist() -> InMemHist<Key, Value> {
         let empty_root_hash = [0u8; 32].into();
         let mut map = BTreeMap::new();
@@ -160,10 +161,11 @@ mod tests {
         // The res is of type Result<Option<_>, _>> so we have to unwrap twice.
         // This is fine to do in the test since the point of this method is to provide
         // helper for the original method.
-        if let CommitResult::Success(new_hash) = res.unwrap() {
+        let res = res.unwrap();
+        if let CommitResult::Success(new_hash) = res {
             new_hash
         } else {
-            panic!("Test commit failed.")
+            panic!("Test commit failed: {:?}", res);
         }
     }
 
@@ -210,6 +212,35 @@ mod tests {
         assert_eq!(tc_2.read(&KEY1).unwrap().unwrap(), v1);
         assert_eq!(tc_2.read(&KEY2).unwrap().unwrap(), v2);
     }
+    fn make_known_urefs() -> BTreeMap<String, Key> {
+        let mut urefs = BTreeMap::new();
+        urefs.insert("ref1".to_string(), Key::URef([0u8; 32], AccessRights::READ));
+        urefs.insert(
+            "ref2".to_string(),
+            Key::URef([1u8; 32], AccessRights::WRITE),
+        );
+        urefs.insert("ref3".to_string(), Key::URef([2u8; 32], AccessRights::ADD));
+        urefs
+    }
+
+    fn prepare_effects() -> HashMap<Key, Transform> {
+        let v1 = Value::Int32(2);
+        let new_v2 = Value::String("I am String now!".to_owned());
+        let key3 = Key::Account([3u8; 20]);
+        let value3 = Value::Int32(3);
+
+        let mut tmp = HashMap::new();
+        tmp.insert(KEY1, Transform::Write(v1));
+        tmp.insert(KEY2, Transform::Write(new_v2));
+        tmp.insert(key3, Transform::Write(value3));
+
+        let contract = Value::Contract(Contract::new((0u8..255u8).collect(), make_known_urefs()));
+        let contract_key = Key::Hash(Default::default());
+        tmp.insert(contract_key, Transform::Write(contract));
+        // tc.write(Validated::new(contract_key), Validated::new(contract));
+
+        tmp
+    }
 
     #[test]
     fn test_checkout_commit_checkout() {
@@ -220,17 +251,7 @@ mod tests {
         let empty_root_hash = [0u8; 32].into();
         let mut gs = prepopulated_hist();
         let _reader = checkout(&gs, empty_root_hash);
-        let v1 = Value::Int32(2);
-        let new_v2 = Value::String("I am String now!".to_owned());
-        let key3 = Key::Account([3u8; 20]);
-        let value3 = Value::Int32(3);
-        let effects = {
-            let mut tmp = HashMap::new();
-            tmp.insert(KEY1, Transform::Write(v1));
-            tmp.insert(KEY2, Transform::Write(new_v2));
-            tmp.insert(key3, Transform::Write(value3));
-            tmp
-        };
+        let effects = prepare_effects();
         // commit changes from the tracking copy
         let _ = commit(&mut gs, empty_root_hash, effects);
         // checkout to the empty root hash
@@ -238,6 +259,35 @@ mod tests {
         assert_eq!(tc_2.read(&KEY1).unwrap().unwrap(), VALUE1);
         assert_eq!(tc_2.read(&KEY2).unwrap().unwrap(), VALUE2);
         // test that value inserted later are not visible in the past commits.
-        assert_eq!(tc_2.read(&key3).unwrap(), None);
+        assert_eq!(tc_2.read(&Key::Account([3u8; 20])).unwrap(), None);
+    }
+
+    #[test]
+    fn multiple_commits() {
+        let mut hist = prepopulated_hist();
+        let empty_root_hash = [0u8; 32].into();
+
+        // Prepare two effects but with different ordering (hashmap's
+        // hash is nondeterministic)
+        let (effects1, effects2) = {
+            let mut effects1 = prepare_effects();
+            let mut effects2 = prepare_effects();
+            // m1.into_iter().collect::<Vec<(String, String)>>() == m2.into_iter().collect::<Vec<(String, String)>>()
+            while effects1.iter().collect::<Vec<(&Key, &Transform)>>()
+                == effects2.iter().collect::<Vec<(&Key, &Transform)>>()
+            {
+                effects1 = prepare_effects();
+                effects2 = prepare_effects();
+            }
+            assert_ne!(
+                effects1.iter().collect::<Vec<(&Key, &Transform)>>(),
+                effects2.iter().collect::<Vec<(&Key, &Transform)>>()
+            );
+            (effects1, effects2)
+        };
+
+        let hash1 = commit(&mut hist, empty_root_hash, effects1);
+        let hash2 = commit(&mut hist, empty_root_hash, effects2);
+        assert_eq!(hash1, [145, 94, 54, 160, 127, 151, 13, 108, 232, 209, 32, 2, 215, 158, 70, 145, 231, 57, 235, 239, 181, 55, 125, 48, 42, 131, 49, 97, 147, 211, 254, 224].into());
     }
 }
