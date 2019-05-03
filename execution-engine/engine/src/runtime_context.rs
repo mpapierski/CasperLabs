@@ -865,17 +865,20 @@ mod tests {
         let memory = MemoryInstance::alloc(Pages(1024), Some(Pages(1024 * 16))).expect("alloc");
 
         // Write an "add" string ABI-encoded
-        let add_fn_data = "add".to_bytes().unwrap();
-        memory.set(123, &add_fn_data).unwrap();
+        let add_fn_data1 = "add".to_bytes().unwrap();
+        memory.set(123, &add_fn_data1).unwrap();
+
+        let add_fn_data2 = "add".to_bytes().unwrap();
+        memory.set(456, &add_fn_data2).unwrap();
 
         let mut runtime = Runtime::new(memory, parity_module, runtime_context);
 
         // Lookup at offset 123
         let add_fn1 = runtime
-            .get_function_by_name(123, add_fn_data.len() as u32)
+            .get_function_by_name(123, add_fn_data1.len() as u32)
             .unwrap();
         let add_fn2 = runtime
-            .get_function_by_name(123, add_fn_data.len() as u32)
+            .get_function_by_name(456, add_fn_data2.len() as u32)
             .unwrap();
 
         assert_eq!(
