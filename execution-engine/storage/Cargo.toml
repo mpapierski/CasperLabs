@@ -7,7 +7,7 @@ authors = ["Michael Birch <birchmd@casperlabs.io>"]
 failure = "0.1.5"
 lmdb = "0.8.0"
 num = { version = "0.2.0", default-features = false }
-wasmi = "0.4.2"
+wasmi = { version = "0.4.2", default-features = false, features = ["core"] }
 common = { path = "../common", features = ["std", "gens"], package = "casperlabs-contract-ffi" }
 parking_lot = "0.7.1"
 shared = { path = "../shared" }

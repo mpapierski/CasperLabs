@@ -5,9 +5,9 @@ authors = ["Michael Birch <birchmd@casperlabs.io>", "Mateusz Górski <gorski.mat
 
 [dependencies]
 blake2 = "0.8"
-wasmi = "0.4.2"
+wasmi = { version = "0.4.2", default-features = false, features = ["core"] }
 parity-wasm = "0.31"
-pwasm-utils = "0.6"
+pwasm-utils = { version = "0.6", default-features = false }
 storage = { path = "../storage" }
 common = { path = "../common", features = ["std", "gens"], package = "casperlabs-contract-ffi" }
 failure = "0.1.5"
