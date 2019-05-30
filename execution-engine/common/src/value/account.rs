@@ -42,8 +42,7 @@ impl Account {
         self.nonce
     }
 
-    /// Consumes instance of account and returns new one
-    /// with old contents but with nonce increased by 1.
+    /// Increments the nonce of an account instance.
     pub fn increment_nonce(&mut self) {
         self.nonce += 1;
     }
