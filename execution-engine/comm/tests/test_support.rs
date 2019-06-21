@@ -1,7 +1,11 @@
+// #[macro_use]
+// extern crate lazy_static;
+
 extern crate casperlabs_engine_grpc_server;
 extern crate shared;
 
 use std::path::PathBuf;
+use std::process::Command;
 
 use shared::test_utils;
 
@@ -12,6 +16,40 @@ use casperlabs_engine_grpc_server::engine_server::state::{BigInt, ProtocolVersio
 
 pub const MOCKED_ACCOUNT_ADDRESS: [u8; 32] = [48u8; 32];
 pub const COMPILED_WASM_PATH: &str = "../target/wasm32-unknown-unknown/debug";
+
+/// Returns contract -> Path to WASM
+fn rebuild_contracts() -> Vec<String> {
+    let mut vec = Vec::new();
+    for &package in &["fake-faucet", "mint-token"] {
+        println!("building {}", package);
+        let result = Command::new("cargo")
+            .args(&[
+                "build",
+                "--target",
+                "wasm32-unknown-unknown",
+                "--package",
+                package,
+            ])
+            .current_dir("../")
+            .output()
+            .unwrap_or_else(|e| panic!("failed to build package {}: {:?}", package, e));
+
+        println!(
+            "{}",
+            String::from_utf8(result.stdout).expect("Unable to decode stdout")
+        );
+        println!(
+            "{}",
+            String::from_utf8(result.stderr).expect("Unable to decode stderr")
+        );
+        vec.push(package.into());
+    }
+    vec
+}
+
+lazy_static! {
+    static ref CONTRACTS: Vec<String> = rebuild_contracts();
+}
 
 pub fn get_protocol_version() -> ProtocolVersion {
     let mut protocol_version: ProtocolVersion = ProtocolVersion::new();
@@ -40,6 +78,8 @@ fn get_compiled_wasm_path(contract_file: PathBuf) -> PathBuf {
 }
 
 pub fn read_wasm_file_bytes(contract_file: &str) -> Vec<u8> {
+    &*CONTRACTS;
+
     let contract_file = PathBuf::from(contract_file);
     let path = get_compiled_wasm_path(contract_file);
     std::fs::read(path.clone()).expect(&format!("should read bytes from disk: {:?}", path))

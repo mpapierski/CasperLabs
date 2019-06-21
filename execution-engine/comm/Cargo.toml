@@ -4,6 +4,7 @@ version = "0.4.0"
 authors = ["Mateusz Górski <gorski.mateusz@protonmail.ch>"]
 description = "WASM execution engine for CasperLabs smart contracts"
 license = "Apache-2.0"
+autotests=false
 
 [dependencies]
 clap = "2.32.0"
@@ -42,3 +43,7 @@ buildflags = ["--release"]
 
 [package.metadata.rpm.targets]
 casperlabs-engine-grpc-server = { path = "/usr/bin/casperlabs-engine-grpc-server" }
+
+[[test]]
+name = "tests"
+harness = true

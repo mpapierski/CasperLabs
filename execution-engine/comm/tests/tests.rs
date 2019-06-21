@@ -1,6 +1,6 @@
-extern crate grpc;
 #[macro_use]
 extern crate lazy_static;
+extern crate grpc;
 
 extern crate casperlabs_engine_grpc_server;
 extern crate common;
@@ -10,7 +10,6 @@ extern crate storage;
 
 mod test_support;
 
-use std::collections::HashMap;
 use std::convert::TryInto;
 
 use grpc::RequestOptions;
