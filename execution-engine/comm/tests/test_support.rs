@@ -18,6 +18,7 @@ use casperlabs_engine_grpc_server::engine_server::ipc::{
 };
 use casperlabs_engine_grpc_server::engine_server::mappings::CommitTransforms;
 use casperlabs_engine_grpc_server::engine_server::state::{BigInt, ProtocolVersion};
+use casperlabs_engine_grpc_server::engine_server::ipc::ExecRequest;
 
 pub const MOCKED_ACCOUNT_ADDRESS: [u8; 32] = [48u8; 32];
 pub const COMPILED_WASM_PATH: &str = "../target/wasm32-unknown-unknown/debug";
@@ -228,4 +229,29 @@ pub fn get_account(
             None
         }
     })
+}
+
+
+pub fn create_exec_request(contract_file_name: &str, pre_state_hash: Vec<u8>) -> ExecRequest {
+    let bytes_to_deploy = read_wasm_file_bytes(contract_file_name);
+
+    let mut deploy = Deploy::new();
+    deploy.set_address([6u8; 32].to_vec());
+    deploy.set_gas_limit(1000000000);
+    deploy.set_gas_price(1);
+    deploy.set_nonce(1);
+    deploy.set_timestamp(10);
+    let mut deploy_code = DeployCode::new();
+    deploy_code.set_code(bytes_to_deploy);
+    deploy.set_session(deploy_code);
+
+    let mut exec_request = ExecRequest::new();
+    let mut deploys: protobuf::RepeatedField<Deploy> = <protobuf::RepeatedField<Deploy>>::new();
+    deploys.push(deploy);
+
+    exec_request.set_deploys(deploys);
+    exec_request.set_parent_state_hash(pre_state_hash.to_vec());
+    exec_request.set_protocol_version(get_protocol_version());
+
+    exec_request
 }
