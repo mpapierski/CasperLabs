@@ -68,7 +68,7 @@ pub fn create_genesis_effects(
     // Store (public_uref, mint_contract_uref) in global state
 
     tmp.insert(
-        Key::URef(public_uref),
+        Key::URef(public_uref).normalize(),
         Value::Key(Key::URef(mint_contract_uref)),
     );
 
@@ -80,9 +80,21 @@ pub fn create_genesis_effects(
 
     // Create genesis genesis_account
 
+    // All blessed / system contract public urefs MUST be added to the genesis account's known_urefs
+    // TODO: do we need to deal with NamedKey ???
+    let known_urefs = {
+        let mut ret: BTreeMap<String, Key> = BTreeMap::new();
+        ret.insert(String::from("mint"), Key::URef(public_uref));
+        ret.insert(
+            mint_contract_uref.as_string(),
+            Key::URef(mint_contract_uref).normalize(),
+        );
+        ret
+    };
+
     let purse_id = PurseId::new(purse_id_uref);
 
-    let genesis_account = init::create_genesis_account(genesis_account_addr, purse_id);
+    let genesis_account = init::create_genesis_account(genesis_account_addr, purse_id, known_urefs);
 
     // Store (genesis_account_addr, genesis_account) in global state
 
@@ -120,7 +132,7 @@ pub fn create_genesis_effects(
 
     // Store (balance_uref_key, balance) in local state
 
-    tmp.insert(balance_uref_key, balance);
+    tmp.insert(balance_uref_key.normalize(), balance);
 
     // Create mint_contract
 
@@ -136,7 +148,7 @@ pub fn create_genesis_effects(
     // Store (mint_contract_uref, mint_contract) in global state
 
     tmp.insert(
-        Key::URef(mint_contract_uref),
+        Key::URef(mint_contract_uref).normalize(),
         Value::Contract(mint_contract),
     );
 
@@ -611,7 +623,8 @@ mod tests {
             PurseId::new(URef::new(bytes, AccessRights::READ_ADD_WRITE))
         };
 
-        let genesis_account = init::create_genesis_account(GENESIS_ACCOUNT_ADDR, purse_id);
+        let genesis_account =
+            init::create_genesis_account(GENESIS_ACCOUNT_ADDR, purse_id, BTreeMap::new());
         let actual =
             extract_transform_account(transforms, &account_key).expect("should have account");
 

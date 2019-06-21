@@ -19,5 +19,6 @@ pub mod os;
 pub mod semver;
 pub mod socket;
 pub mod test_utils;
+mod tmp;
 pub mod transform;
 pub mod utils;

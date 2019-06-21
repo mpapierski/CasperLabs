@@ -1,10 +1,12 @@
 use crate::bytesrepr::{Error, FromBytes, ToBytes, U32_SIZE, U64_SIZE, U8_SIZE};
 use crate::key::{Key, UREF_SIZE};
-use crate::uref::URef;
+use crate::uref::{URef, UREF_SIZE_SERIALIZED};
 use alloc::collections::btree_map::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 use failure::Fail;
+
+pub const PURSE_ID_SIZE_SERIALIZED: usize = UREF_SIZE_SERIALIZED;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PurseId(URef);
@@ -16,6 +18,18 @@ impl PurseId {
 
     pub fn value(&self) -> URef {
         self.0
+    }
+}
+
+impl ToBytes for PurseId {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
+        ToBytes::to_bytes(&self.0)
+    }
+}
+
+impl FromBytes for PurseId {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
+        <URef>::from_bytes(bytes).map(|(uref, rem)| (PurseId::new(uref), rem))
     }
 }
 

@@ -3,14 +3,19 @@ extern crate grpc;
 extern crate lazy_static;
 
 extern crate casperlabs_engine_grpc_server;
+extern crate common;
 extern crate execution_engine;
 extern crate shared;
 extern crate storage;
 
-mod common;
+mod test_support;
+
+use std::collections::HashMap;
+use std::convert::TryInto;
 
 use grpc::RequestOptions;
 
+use common::key::Key;
 use execution_engine::engine_state::EngineState;
 use shared::init::mocked_account;
 use shared::logging::log_level::LogLevel;
@@ -18,15 +23,21 @@ use shared::logging::log_settings::{self, LogLevelFilter, LogSettings};
 use shared::logging::logger::{self, LogBufferProvider, BUFFERED_LOGGER};
 use shared::newtypes::CorrelationId;
 use shared::test_utils;
+use shared::transform::Transform;
 use storage::global_state::in_memory::InMemoryGlobalState;
+use storage::global_state::History;
 
 use casperlabs_engine_grpc_server::engine_server::ipc::{
-    CommitRequest, Deploy, DeployCode, ExecRequest, GenesisRequest, QueryRequest, ValidateRequest,
+    CommitRequest, Deploy, DeployCode, ExecRequest, ExecutionEffect, GenesisRequest, QueryRequest,
+    ValidateRequest,
 };
 use casperlabs_engine_grpc_server::engine_server::ipc_grpc::ExecutionEngineService;
+use casperlabs_engine_grpc_server::engine_server::mappings::CommitTransforms;
 use casperlabs_engine_grpc_server::engine_server::state::{
-    BigInt, Key, Key_Address, ProtocolVersion,
+    self, BigInt, Key_Address, ProtocolVersion,
 };
+use common::value::Value;
+use execution_engine::tracking_copy::TrackingCopy;
 
 pub const PROC_NAME: &str = "ee-shared-lib-tests";
 
@@ -41,23 +52,23 @@ fn setup() {
 }
 
 lazy_static! {
-    static ref LOG_SETTINGS: LogSettings = get_log_settings(LogLevel::Debug);
+    static ref LOG_SETTINGS: LogSettings = get_log_settings(LogLevel::Error);
 }
 
 #[test]
 fn should_query_with_metrics() {
     setup();
     let correlation_id = CorrelationId::new();
-    let mocked_account = mocked_account(common::MOCKED_ACCOUNT_ADDRESS);
+    let mocked_account = mocked_account(test_support::MOCKED_ACCOUNT_ADDRESS);
     let global_state = InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
     let root_hash = global_state.root_hash.to_vec();
     let engine_state = EngineState::new(global_state, false);
 
     let mut query_request = QueryRequest::new();
     {
-        let mut key = Key::new();
+        let mut key = state::Key::new();
         let mut key_address = Key_Address::new();
-        key_address.set_account(common::MOCKED_ACCOUNT_ADDRESS.to_vec());
+        key_address.set_account(test_support::MOCKED_ACCOUNT_ADDRESS.to_vec());
         key.set_address(key_address);
 
         query_request.set_base_key(key);
@@ -100,7 +111,7 @@ fn should_query_with_metrics() {
 fn should_exec_with_metrics() {
     setup();
     let correlation_id = CorrelationId::new();
-    let mocked_account = mocked_account(common::MOCKED_ACCOUNT_ADDRESS);
+    let mocked_account = mocked_account(test_support::MOCKED_ACCOUNT_ADDRESS);
     let global_state = InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
     let root_hash = global_state.root_hash.to_vec();
     let engine_state = EngineState::new(global_state, false);
@@ -108,11 +119,11 @@ fn should_exec_with_metrics() {
     let mut exec_request = ExecRequest::new();
     {
         let mut deploys: protobuf::RepeatedField<Deploy> = <protobuf::RepeatedField<Deploy>>::new();
-        deploys.push(common::get_mock_deploy());
+        deploys.push(test_support::get_mock_deploy());
 
         exec_request.set_deploys(deploys);
         exec_request.set_parent_state_hash(root_hash);
-        exec_request.set_protocol_version(common::get_protocol_version());
+        exec_request.set_protocol_version(test_support::get_protocol_version());
     }
 
     let _exec_response_result = engine_state
@@ -150,7 +161,7 @@ fn should_exec_with_metrics() {
 fn should_commit_with_metrics() {
     setup();
     let correlation_id = CorrelationId::new();
-    let mocked_account = mocked_account(common::MOCKED_ACCOUNT_ADDRESS);
+    let mocked_account = mocked_account(test_support::MOCKED_ACCOUNT_ADDRESS);
     let global_state = InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
     let root_hash = global_state.root_hash.to_vec();
     let engine_state = EngineState::new(global_state, false);
@@ -197,7 +208,7 @@ fn should_commit_with_metrics() {
 fn should_validate_with_metrics() {
     setup();
     let correlation_id = CorrelationId::new();
-    let mocked_account = mocked_account(common::MOCKED_ACCOUNT_ADDRESS);
+    let mocked_account = mocked_account(test_support::MOCKED_ACCOUNT_ADDRESS);
     let global_state = InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
     let engine_state = EngineState::new(global_state, false);
 
@@ -307,7 +318,7 @@ fn should_run_genesis_with_mint_bytes() {
     let global_state = InMemoryGlobalState::empty().expect("should create global state");
     let engine_state = EngineState::new(global_state, false);
 
-    let genesis_request = common::create_genesis_request();
+    let genesis_request = test_support::create_genesis_request();
 
     let request_options = RequestOptions::new();
 
@@ -325,4 +336,78 @@ fn should_run_genesis_with_mint_bytes() {
     let response_root_hash = response.get_success().get_poststate_hash();
 
     assert_eq!(state_root_hash.to_vec(), response_root_hash.to_vec());
+}
+
+#[ignore]
+#[test]
+fn should_run_fake_faucet() {
+    setup();
+    let correlation_id = CorrelationId::new();
+    let mocked_account = mocked_account(test_support::MOCKED_ACCOUNT_ADDRESS);
+    let global_state = InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
+    let engine_state = EngineState::new(global_state, false);
+
+    let genesis_request = test_support::create_genesis_request();
+
+    let request_options = RequestOptions::new();
+
+    let genesis_response = engine_state
+        .run_genesis(request_options, genesis_request)
+        .wait_drop_metadata();
+
+    let response = genesis_response.unwrap();
+
+    let effect: &ExecutionEffect = response.get_success().get_effect();
+
+    let map: CommitTransforms = effect
+        .get_transform_map()
+        .try_into()
+        .expect("should convert");
+
+    let map = map.value();
+
+    let state_handle = engine_state.state();
+
+    let state_root_hash = {
+        let state_handle_guard = state_handle.lock();
+        let root_hash = state_handle_guard.root_hash;
+        let mut tracking_copy: TrackingCopy<InMemoryGlobalState> = state_handle_guard
+            .checkout(root_hash)
+            .expect("should return global state")
+            .map(TrackingCopy::new)
+            .expect("should return tracking copy");
+
+        for (k, v) in map.iter() {
+            if let Transform::Write(v) = v {
+                assert_eq!(
+                    Some(v.to_owned()),
+                    tracking_copy.get(correlation_id, k).expect("should get")
+                );
+            } else {
+                panic!("ffuuu");
+            }
+        }
+
+        root_hash
+    };
+
+    let response_root_hash = response.get_success().get_poststate_hash();
+
+    let post_state_hash = response_root_hash.to_vec();
+
+    assert_eq!(state_root_hash.to_vec(), post_state_hash);
+
+    let exec_request = test_support::create_exec_request("fake_faucet.wasm", post_state_hash);
+
+    let log_items = BUFFERED_LOGGER
+        .extract_correlated(&correlation_id.to_string())
+        .expect("log items expected");
+
+    println!("{:?}", log_items);
+
+    let exec_response_result = engine_state
+        .exec(RequestOptions::new(), exec_request)
+        .wait_drop_metadata();
+
+    println!("{:?}", exec_response_result);
 }

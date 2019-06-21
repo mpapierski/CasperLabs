@@ -9,7 +9,7 @@ use blake2::digest::{Input, VariableOutput};
 use blake2::VarBlake2b;
 use itertools::Itertools;
 use parity_wasm::elements::{Error as ParityWasmError, Module};
-use rand::SeedableRng;
+use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaChaRng;
 use wasmi::{
     Error as InterpreterError, Externals, HostError, ImportsBuilder, MemoryRef, ModuleInstance,
@@ -17,18 +17,20 @@ use wasmi::{
 };
 
 use common::bytesrepr::{deserialize, Error as BytesReprError, ToBytes, U32_SIZE};
+use common::contract_api::argsparser::ArgsParser;
 use common::key::Key;
-use common::uref::AccessRights;
+use common::uref::{AccessRights, URef};
 use common::value::account::{
-    ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure, Weight,
+    ActionType, AddKeyFailure, PublicKey, PurseId, RemoveKeyFailure, SetThresholdFailure, Weight,
     PUBLIC_KEY_SIZE,
 };
-use common::value::Value;
+use common::value::{Value, U512};
 use shared::newtypes::{CorrelationId, Validated};
 use shared::transform::TypeMismatch;
 use storage::global_state::StateReader;
 
 use args::Args;
+use common::contract_api::TransferResult;
 use engine_state::execution_result::ExecutionResult;
 use function_index::FunctionIndex;
 use resolvers::create_module_resolver;
@@ -44,6 +46,7 @@ pub enum Error {
     Storage(storage::error::Error),
     BytesRepr(BytesReprError),
     KeyNotFound(Key),
+    AccountNotFound(Key),
     TypeMismatch(TypeMismatch),
     InvalidAccess {
         required: AccessRights,
@@ -66,6 +69,7 @@ pub enum Error {
     AddKeyFailure(AddKeyFailure),
     RemoveKeyFailure(RemoveKeyFailure),
     SetThresholdFailure(SetThresholdFailure),
+    CallContractError,
 }
 
 impl fmt::Display for Error {
@@ -531,6 +535,127 @@ where
             Err(e) => Err(e.into()),
         }
     }
+
+    fn get_mint_contract(&mut self, public_uref: Key) -> Result<Option<URef>, Error> {
+        let value = self.context.read_gs_insecure(&public_uref)?;
+        println!("value: {:#?}", value);
+        match value {
+            Some(Value::Key(Key::URef(uref))) => Ok(Some(uref)),
+            _ => Ok(None),
+        }
+    }
+
+    fn call_mint(
+        &mut self,
+        mint_uref: Key,
+        source: PurseId,
+        target: PurseId,
+        amount: U512,
+    ) -> Result<bool, Error> {
+        let mint_contract = self.get_mint_contract(mint_uref)?.expect("should get mint");
+        let source = Key::URef(source.value());
+        let target = Key::URef(target.value());
+
+        let args = ("transfer", source, target, amount);
+
+        let args_bytes = ArgsParser::parse(&args)
+            .and_then(|args| args.to_bytes())
+            .expect("should serialize");
+
+        let urefs_bytes = vec![source].to_bytes().expect("should serialize");
+
+        self.call_contract(Key::URef(mint_contract), args_bytes, urefs_bytes)
+            .expect("should call");
+
+        let result: String = deserialize(&self.host_buf).expect("should deserialize");
+
+        Ok(&result == "Successful transfer")
+    }
+
+    pub fn transfer_to_account(
+        &mut self,
+        target: PublicKey,
+        amount: U512,
+    ) -> Result<TransferResult, Error> {
+        let account_addr = target.value();
+        let account_key = Key::Account(account_addr);
+
+        let mint_uref = self
+            .context
+            .get_uref("mint")
+            .and_then(|k| match k {
+                Key::URef(_) => Some(*k),
+                _ => None,
+            })
+            .ok_or_else(|| Error::URefNotFound(String::from("mint")))?;
+
+        let result: TransferResult;
+
+        let target = match self.context.read_gs_insecure(&account_key)? {
+            Some(Value::Account(account)) => {
+                result = TransferResult::TransferredToExistingAccount;
+                account.purse_id()
+            }
+            Some(_) => {
+                return Err(Error::AccountNotFound(account_key));
+            }
+            None => {
+                result = TransferResult::TransferredToNewAccount;
+
+                let new_purse_id_uref = {
+                    let mut addr = [0u8; 32];
+                    self.context.rng().fill_bytes(&mut addr);
+                    URef::new(addr, AccessRights::READ_ADD_WRITE)
+                };
+
+                let purse_id = PurseId::new(new_purse_id_uref);
+
+                let known_urefs = {
+                    let mut ret: BTreeMap<String, Key> = BTreeMap::new();
+                    ret.insert(String::from("mint"), mint_uref);
+                    ret
+                };
+
+                let account = shared::init::create_account(account_addr, 0, known_urefs, purse_id);
+
+                self.context
+                    .write_gs_insecure(account_key, Value::Account(account))?;
+
+                purse_id
+            }
+        };
+
+        let source = self.context.account().purse_id();
+
+        if self.call_mint(mint_uref, source, target, amount)? {
+            Ok(result)
+        } else {
+            Err(Error::CallContractError)
+        }
+    }
+
+    pub fn transfer_to_purse(
+        &mut self,
+        target: PurseId,
+        amount: U512,
+    ) -> Result<TransferResult, Error> {
+        let mint_uref = self
+            .context
+            .get_uref("mint")
+            .and_then(|k| match k {
+                Key::URef(_) => Some(*k),
+                _ => None,
+            })
+            .ok_or_else(|| Error::URefNotFound(String::from("mint")))?;
+
+        let source = self.context.account().purse_id();
+
+        if self.call_mint(mint_uref, source, target, amount)? {
+            Ok(TransferResult::TransferredToExistingAccount)
+        } else {
+            Err(Error::CallContractError)
+        }
+    }
 }
 
 fn as_usize(u: u32) -> usize {
@@ -782,6 +907,51 @@ where
                 let (action_type_value, threshold_value): (u32, u8) = Args::parse(args)?;
                 let value = self.set_action_threshold(action_type_value, threshold_value)?;
                 Ok(Some(RuntimeValue::I32(value)))
+            }
+
+            FunctionIndex::TransferToAccount => {
+                println!("entering transfer_to_account");
+                let (public_key_ptr, public_key_size, amount_ptr, amount_size): (
+                    u32,
+                    u32,
+                    u32,
+                    u32,
+                ) = Args::parse(args)?;
+
+                let public_key: PublicKey = {
+                    let public_key_bytes =
+                        self.bytes_from_mem(public_key_ptr, public_key_size as usize)?;
+                    deserialize(&public_key_bytes).map_err(Error::BytesRepr)?
+                };
+
+                println!("deserialized public key");
+
+                let amount: U512 = {
+                    let amount_bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
+                    deserialize(&amount_bytes).map_err(Error::BytesRepr)?
+                };
+
+                let ret = self.transfer_to_account(public_key, amount)?;
+                Ok(Some(RuntimeValue::I32(ret as i32)))
+            }
+
+            FunctionIndex::TransferToPurse => {
+                let (purse_id_ptr, purse_id_size, amount_ptr, amount_size): (u32, u32, u32, u32) =
+                    Args::parse(args)?;
+
+                let purse_id: PurseId = {
+                    let purse_id_bytes =
+                        self.bytes_from_mem(purse_id_ptr, purse_id_size as usize)?;
+                    deserialize(&purse_id_bytes).map_err(Error::BytesRepr)?
+                };
+
+                let amount: U512 = {
+                    let amount_bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
+                    deserialize(&amount_bytes).map_err(Error::BytesRepr)?
+                };
+
+                let ret = self.transfer_to_purse(purse_id, amount)?;
+                Ok(Some(RuntimeValue::I32(ret as i32)))
             }
         }
     }

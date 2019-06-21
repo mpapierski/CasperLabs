@@ -4,14 +4,14 @@ pub mod pointers;
 
 use self::alloc_util::*;
 use self::pointers::*;
-use crate::bytesrepr::{deserialize, FromBytes, ToBytes};
+use crate::bytesrepr::{self, deserialize, FromBytes, ToBytes};
 use crate::ext_ffi;
 use crate::key::{Key, UREF_SIZE};
 use crate::uref::URef;
 use crate::value::account::{
-    ActionType, AddKeyFailure, PublicKey, RemoveKeyFailure, SetThresholdFailure, Weight,
+    ActionType, AddKeyFailure, PublicKey, PurseId, RemoveKeyFailure, SetThresholdFailure, Weight,
 };
-use crate::value::{Contract, Value};
+use crate::value::{Contract, Value, U512};
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -328,4 +328,41 @@ pub fn set_action_threshold(
         d if d == 0 => Ok(()),
         d => Err(SetThresholdFailure::from(d)),
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(u8)]
+pub enum TransferResult {
+    TransferredToExistingAccount = 0,
+    TransferredToNewAccount = 1,
+    InsufficientFunds = 2,
+}
+
+impl TryFrom<i32> for TransferResult {
+    type Error = bytesrepr::Error;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(TransferResult::TransferredToExistingAccount),
+            1 => Ok(TransferResult::TransferredToNewAccount),
+            2 => Ok(TransferResult::InsufficientFunds),
+            _ => Err(bytesrepr::Error::FormattingError),
+        }
+    }
+}
+
+pub fn transfer_to_account(target: PublicKey, amount: U512) -> TransferResult {
+    let (target_ptr, target_size, _bytes) = to_ptr(&target);
+    let (amount_ptr, amount_size, _bytes) = to_ptr(&amount);
+    let transfer_result =
+        unsafe { ext_ffi::transfer_to_account(target_ptr, target_size, amount_ptr, amount_size) };
+    transfer_result.try_into().expect("should parse result")
+}
+
+pub fn transfer_to_purse(target: PurseId, amount: U512) -> TransferResult {
+    let (target_ptr, target_size, _bytes) = to_ptr(&target);
+    let (amount_ptr, amount_size, _bytes) = to_ptr(&amount);
+    let transfer_result =
+        unsafe { ext_ffi::transfer_to_purse(target_ptr, target_size, amount_ptr, amount_size) };
+    transfer_result.try_into().expect("should parse result")
 }

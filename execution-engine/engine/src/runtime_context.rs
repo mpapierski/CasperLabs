@@ -214,6 +214,14 @@ where
         Ok(())
     }
 
+    pub fn read_gs_insecure(&mut self, key: &Key) -> Result<Option<Value>, Error> {
+        let validated_key = Validated::new(*key, Validated::valid)?;
+        self.state
+            .borrow_mut()
+            .read(self.correlation_id, &validated_key)
+            .map_err(Into::into)
+    }
+
     pub fn read_gs(&mut self, key: &Key) -> Result<Option<Value>, Error> {
         let validated_key = Validated::new(*key, |key| {
             self.validate_readable(&key).and(self.validate_key(&key))
@@ -243,6 +251,15 @@ where
         value.try_into().map_err(|s| {
             Error::FunctionNotFound(format!("Value at {:?} has invalid type: {}", key, s))
         })
+    }
+
+    pub fn write_gs_insecure(&mut self, key: Key, value: Value) -> Result<(), Error> {
+        let validated_key: Validated<Key> = Validated::new(key, Validated::valid)?;
+        let validated_value = Validated::new(value, |value| self.validate_keys(&value))?;
+        self.state
+            .borrow_mut()
+            .write(validated_key, validated_value);
+        Ok(())
     }
 
     pub fn write_gs(&mut self, key: Key, value: Value) -> Result<(), Error> {
