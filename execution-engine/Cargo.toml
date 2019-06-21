@@ -10,5 +10,6 @@ members = [
     "shared",
     "storage",
     "test-contracts/fake-faucet",
+    "test-contracts/local-state",
     "wasm-prep",
 ]

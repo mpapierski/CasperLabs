@@ -20,7 +20,7 @@ pub const COMPILED_WASM_PATH: &str = "../target/wasm32-unknown-unknown/debug";
 /// Returns contract -> Path to WASM
 fn rebuild_contracts() -> Vec<String> {
     let mut vec = Vec::new();
-    for &package in &["fake-faucet", "mint-token"] {
+    for &package in &["fake-faucet", "mint-token", "local-state"] {
         println!("building {}", package);
         let result = Command::new("cargo")
             .args(&[
