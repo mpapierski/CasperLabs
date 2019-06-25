@@ -1,24 +1,37 @@
 extern crate casperlabs_engine_grpc_server;
 extern crate common;
 extern crate execution_engine;
+extern crate grpc;
 extern crate shared;
+extern crate storage;
 extern crate wasm_prep;
 
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::PathBuf;
 
+use grpc::RequestOptions;
+
 use execution_engine::engine_state::utils::WasmiBytes;
+use execution_engine::engine_state::EngineState;
+use execution_engine::tracking_copy::TrackingCopy;
+
+use shared::init::mocked_account;
+use shared::logging::logger::LogBufferProvider;
+use shared::logging::logger::BUFFERED_LOGGER;
+use shared::newtypes::CorrelationId;
 use shared::test_utils;
 use shared::transform::Transform;
 
 use casperlabs_engine_grpc_server::engine_server::ipc::{
-    CommitRequest, Deploy, DeployCode, DeployResult, ExecRequest, ExecResponse, GenesisRequest,
-    GenesisResponse, TransformEntry,
+    CommitRequest, Deploy, DeployCode, DeployResult, ExecRequest, ExecResponse, ExecutionEffect,
+    GenesisRequest, GenesisResponse, TransformEntry,
 };
+use casperlabs_engine_grpc_server::engine_server::ipc_grpc::ExecutionEngineService;
 use casperlabs_engine_grpc_server::engine_server::mappings::CommitTransforms;
 use casperlabs_engine_grpc_server::engine_server::state::{BigInt, ProtocolVersion};
-use casperlabs_engine_grpc_server::engine_server::ipc::ExecRequest;
+use storage::global_state::in_memory::InMemoryGlobalState;
+use storage::global_state::History;
 
 pub const MOCKED_ACCOUNT_ADDRESS: [u8; 32] = [48u8; 32];
 pub const COMPILED_WASM_PATH: &str = "../target/wasm32-unknown-unknown/debug";
@@ -176,6 +189,12 @@ pub fn get_exec_transforms(
     deploy_results
         .iter()
         .map(|deploy_result| {
+            if deploy_result.get_execution_result().has_error() {
+                panic!(
+                    "Deploy result contained an error: {:?}",
+                    deploy_result.get_execution_result().get_error()
+                );
+            }
             let commit_transforms: CommitTransforms = deploy_result
                 .get_execution_result()
                 .get_effects()
@@ -231,27 +250,96 @@ pub fn get_account(
     })
 }
 
+/// Builder for simple WASM test
+#[derive(Default)]
+pub struct WasmTestBuilder {
+    genesis_addr: [u8; 32],
+    wasm_file: String,
+}
 
-pub fn create_exec_request(contract_file_name: &str, pre_state_hash: Vec<u8>) -> ExecRequest {
-    let bytes_to_deploy = read_wasm_file_bytes(contract_file_name);
+impl WasmTestBuilder {
+    pub fn new<T: Into<String>>(wasm_file: T) -> WasmTestBuilder {
+        WasmTestBuilder {
+            genesis_addr: [0; 32],
+            wasm_file: wasm_file.into(),
+        }
+    }
+    /// Sets a genesis address
+    pub fn with_genesis_addr(&mut self, genesis_addr: [u8; 32]) -> &mut WasmTestBuilder {
+        self.genesis_addr = genesis_addr;
+        self
+    }
 
-    let mut deploy = Deploy::new();
-    deploy.set_address([6u8; 32].to_vec());
-    deploy.set_gas_limit(1000000000);
-    deploy.set_gas_price(1);
-    deploy.set_nonce(1);
-    deploy.set_timestamp(10);
-    let mut deploy_code = DeployCode::new();
-    deploy_code.set_code(bytes_to_deploy);
-    deploy.set_session(deploy_code);
+    /// Runs genesis and after that runs actual WASM contract and expects
+    /// transformations to happen at the end of execution.
+    pub fn expect_transforms(&self) -> HashMap<common::key::Key, Transform> {
+        let correlation_id = CorrelationId::new();
+        let mocked_account = mocked_account(MOCKED_ACCOUNT_ADDRESS);
+        let global_state =
+            InMemoryGlobalState::from_pairs(correlation_id, &mocked_account).unwrap();
+        let engine_state = EngineState::new(global_state, false);
 
-    let mut exec_request = ExecRequest::new();
-    let mut deploys: protobuf::RepeatedField<Deploy> = <protobuf::RepeatedField<Deploy>>::new();
-    deploys.push(deploy);
+        let (genesis_request, _contracts) = create_genesis_request(self.genesis_addr);
 
-    exec_request.set_deploys(deploys);
-    exec_request.set_parent_state_hash(pre_state_hash.to_vec());
-    exec_request.set_protocol_version(get_protocol_version());
+        let genesis_response = engine_state
+            .run_genesis(RequestOptions::new(), genesis_request)
+            .wait_drop_metadata()
+            .unwrap();
 
-    exec_request
+        let effect: &ExecutionEffect = genesis_response.get_success().get_effect();
+
+        let map: CommitTransforms = effect
+            .get_transform_map()
+            .try_into()
+            .expect("should convert");
+
+        let map = map.value();
+
+        let state_handle = engine_state.state();
+
+        let state_root_hash = {
+            let state_handle_guard = state_handle.lock();
+            let root_hash = state_handle_guard.root_hash;
+            let mut tracking_copy: TrackingCopy<InMemoryGlobalState> = state_handle_guard
+                .checkout(root_hash)
+                .expect("should return global state")
+                .map(TrackingCopy::new)
+                .expect("should return tracking copy");
+
+            for (k, v) in map.iter() {
+                if let Transform::Write(v) = v {
+                    assert_eq!(
+                        Some(v.to_owned()),
+                        tracking_copy.get(correlation_id, k).expect("should get")
+                    );
+                } else {
+                    panic!("ffuuu");
+                }
+            }
+
+            root_hash
+        };
+
+        let genesis_hash = genesis_response.get_success().get_poststate_hash();
+
+        let post_state_hash = genesis_hash.to_vec();
+
+        assert_eq!(state_root_hash.to_vec(), post_state_hash);
+        let exec_request =
+            create_exec_request(self.genesis_addr, &self.wasm_file, &post_state_hash);
+
+        let _log_items = BUFFERED_LOGGER
+            .extract_correlated(&correlation_id.to_string())
+            .expect("log items expected");
+
+        let exec_response = engine_state
+            .exec(RequestOptions::new(), exec_request)
+            .wait_drop_metadata()
+            .expect("should exec");
+
+        // Verify transforms
+        let mut transforms = get_exec_transforms(&exec_response);
+        assert_eq!(transforms.len(), 1, "Expected just single transform");
+        transforms.pop().unwrap()
+    }
 }
