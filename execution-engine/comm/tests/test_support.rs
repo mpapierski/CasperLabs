@@ -189,12 +189,6 @@ pub fn get_exec_transforms(
     deploy_results
         .iter()
         .map(|deploy_result| {
-            if deploy_result.get_execution_result().has_error() {
-                panic!(
-                    "Deploy result contained an error: {:?}",
-                    deploy_result.get_execution_result().get_error()
-                );
-            }
             let commit_transforms: CommitTransforms = deploy_result
                 .get_execution_result()
                 .get_effects()
@@ -255,6 +249,7 @@ pub fn get_account(
 pub struct WasmTestBuilder {
     genesis_addr: [u8; 32],
     wasm_file: String,
+    exec_response: Option<ExecResponse>,
 }
 
 impl WasmTestBuilder {
@@ -262,6 +257,7 @@ impl WasmTestBuilder {
         WasmTestBuilder {
             genesis_addr: [0; 32],
             wasm_file: wasm_file.into(),
+            exec_response: None,
         }
     }
     /// Sets a genesis address
@@ -272,7 +268,8 @@ impl WasmTestBuilder {
 
     /// Runs genesis and after that runs actual WASM contract and expects
     /// transformations to happen at the end of execution.
-    pub fn expect_transforms(&self) -> HashMap<common::key::Key, Transform> {
+    // pub fn run(&self) -> HashMap<common::key::Key, Transform> {
+    pub fn run(&mut self) -> &mut WasmTestBuilder {
         let correlation_id = CorrelationId::new();
         let mocked_account = mocked_account(MOCKED_ACCOUNT_ADDRESS);
         let global_state =
@@ -338,8 +335,34 @@ impl WasmTestBuilder {
             .expect("should exec");
 
         // Verify transforms
-        let mut transforms = get_exec_transforms(&exec_response);
-        assert_eq!(transforms.len(), 1, "Expected just single transform");
-        transforms.pop().unwrap()
+        self.exec_response = Some(exec_response.clone());
+        self
+    }
+
+    /// Expects a successful run and returns transformations
+    pub fn expect_success(&self) -> HashMap<common::key::Key, Transform> {
+        // Check first result, as only first result is interesting for a simple test
+        let exec_response = self
+            .exec_response
+            .as_ref()
+            .expect("Expected to be called after run()");
+        let deploy_result = exec_response
+            .get_success()
+            .get_deploy_results()
+            .get(0)
+            .expect("Unable to get first deploy result");
+        if deploy_result.get_execution_result().has_error() {
+            panic!(
+                "Expected error, but instead got a successful response: {:?}",
+                exec_response,
+            );
+        }
+        let commit_transforms: CommitTransforms = deploy_result
+            .get_execution_result()
+            .get_effects()
+            .get_transform_map()
+            .try_into()
+            .expect("should convert");
+        commit_transforms.value()
     }
 }
