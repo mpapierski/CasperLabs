@@ -482,8 +482,11 @@ impl Account {
 
     /// Consumes instance of account and returns new one
     /// with old contents but with nonce increased by 1.
-    pub fn increment_nonce(&mut self) {
+    ///
+    /// Returns new nonce value.
+    pub fn increment_nonce(&mut self) -> u64 {
         self.nonce += 1;
+        self.nonce
     }
 
     pub fn add_associated_key(

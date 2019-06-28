@@ -47,6 +47,8 @@ pub struct RuntimeContext<'a, R> {
     rng: ChaChaRng,
     protocol_version: u64,
     correlation_id: CorrelationId,
+    // Current nonce as passed through IPC and validated already
+    nonce: u64,
 }
 
 impl<'a, R: StateReader<Key, Value>> RuntimeContext<'a, R>
@@ -69,6 +71,7 @@ where
         rng: ChaChaRng,
         protocol_version: u64,
         correlation_id: CorrelationId,
+        nonce: u64,
     ) -> Self {
         RuntimeContext {
             state,
@@ -85,6 +88,7 @@ where
             rng,
             protocol_version,
             correlation_id,
+            nonce,
         }
     }
 
@@ -232,12 +236,9 @@ where
     /// then all function addresses generated within one deploy would have been the same.
     pub fn new_function_address(&mut self) -> Result<[u8; 32], Error> {
         let mut pre_hash_bytes = Vec::with_capacity(44); //32 byte pk + 8 byte nonce + 4 byte ID
-        {
-            let account = self.account();
-            pre_hash_bytes.extend_from_slice(&account.pub_key());
-            pre_hash_bytes.append(&mut account.nonce().to_bytes()?);
-            pre_hash_bytes.append(&mut self.fn_store_id().to_bytes()?);
-        }
+        pre_hash_bytes.extend_from_slice(&self.account().pub_key());
+        pre_hash_bytes.append(&mut self.nonce().to_bytes()?);
+        pre_hash_bytes.append(&mut self.fn_store_id().to_bytes()?);
 
         self.inc_fn_store_id();
 
@@ -621,6 +622,11 @@ where
 
         Ok(())
     }
+
+    /// Returns a nonce as validated value passed through IPC
+    pub fn nonce(&self) -> u64 {
+        self.nonce
+    }
 }
 
 #[cfg(test)]
@@ -740,6 +746,7 @@ mod tests {
             rng,
             1,
             CorrelationId::new(),
+            account.nonce(),
         )
     }
 
@@ -1036,6 +1043,7 @@ mod tests {
             chacha_rng,
             1,
             CorrelationId::new(),
+            account.nonce(),
         );
 
         let uref_name = "NewURef".to_owned();
@@ -1089,6 +1097,7 @@ mod tests {
             chacha_rng,
             1,
             CorrelationId::new(),
+            account.nonce(),
         );
 
         let uref_name = "NewURef".to_owned();

@@ -1218,6 +1218,7 @@ where
             rng,
             protocol_version,
             current_runtime.context.correlation_id(),
+            current_runtime.context.nonce(),
         ),
     };
 
@@ -1384,7 +1385,7 @@ impl Executor<Module> for WasmiExecutor {
             }
         };
 
-        if nonce_check {
+        let nonce = if nonce_check {
             // Check the difference of a request nonce and account nonce.
             // Since both nonce and account's nonce are unsigned, so line below performs
             // a checked subtraction, where underflow (or overflow) would be safe.
@@ -1402,13 +1403,21 @@ impl Executor<Module> for WasmiExecutor {
             }
 
             let mut updated_account = account.clone();
-            updated_account.increment_nonce();
+            // Save the incremented nonce which will be used through the execution lifecycle
+            let updated_nonce = updated_account.increment_nonce();
             // Store updated account with new nonce
             tc.borrow_mut().write(
                 validated_key,
                 Validated::new(updated_account.into(), Validated::valid).unwrap(),
             );
-        }
+            // Use already updated nonce, also, in other words, the nonce value used in execution
+            // stage will be the one that's passed through IPC.
+            updated_nonce
+        } else {
+            // Use deliberately invalid value based on account's nonce (plus one, which would assume
+            // it was incremented)
+            account.nonce() + 1
+        };
 
         let mut uref_lookup_local = account.urefs_lookup().clone();
         let known_urefs: HashMap<URefAddr, HashSet<AccessRights>> =
@@ -1445,6 +1454,7 @@ impl Executor<Module> for WasmiExecutor {
             rng,
             protocol_version,
             correlation_id,
+            nonce,
         );
 
         let mut runtime = Runtime::new(memory, parity_module, context);
