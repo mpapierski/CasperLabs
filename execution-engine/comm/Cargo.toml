@@ -22,6 +22,7 @@ shared = { path = "../shared" }
 storage = { path = "../storage" }
 wabt = "0.7.4"
 wasm-prep = { path = "../wasm-prep" }
+jni = "0.13.0"
 
 [build-dependencies]
 protoc-rust-grpc = "0.6.1"
