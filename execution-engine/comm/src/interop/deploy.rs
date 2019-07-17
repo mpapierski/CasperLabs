@@ -1,4 +1,5 @@
 use crate::interop::deploy_code::DeployCode;
+use jni::objects::{GlobalRef, JClass, JObject, JString};
 
 pub struct Deploy {
     address: [u8; 32],

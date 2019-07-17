@@ -23,6 +23,14 @@ JNIEXPORT void JNICALL Java_ExecutionEngine_init
 JNIEXPORT void JNICALL Java_ExecutionEngine_destroy
   (JNIEnv *, jclass, jobject);
 
+/*
+ * Class:     ExecutionEngine
+ * Method:    exec
+ * Signature: (Ljava/lang/Object;[BJ[LExecutionEngine/Deploy;J)V
+ */
+JNIEXPORT void JNICALL Java_ExecutionEngine_exec
+  (JNIEnv *, jclass, jobject, jbyteArray, jlong, jobjectArray, jlong);
+
 #ifdef __cplusplus
 }
 #endif
