@@ -32,47 +32,86 @@ use lmdb::DatabaseFlags;
 use storage::global_state::lmdb::LmdbGlobalState;
 use storage::trie_store::lmdb::{LmdbEnvironment, LmdbTrieStore};
 use execution_engine::engine_state::EngineState;
-#[allow(non_snake_case)]
+use shared::os::get_page_size;
+use std::fs;
 
+
+fn get_engine_state(data_dir: PathBuf, map_size: usize) -> EngineState<LmdbGlobalState> {
+    if let Err(err) = fs::create_dir_all(&data_dir) {
+        eprintln!("Get engine state create dir {:?}: {:?}", data_dir, err);
+    }
+
+    let environment = {
+        let ret = LmdbEnvironment::new(&data_dir, map_size).expect("should create lmdb environment");
+        Arc::new(ret)
+    };
+
+    let trie_store = {
+        let ret = LmdbTrieStore::new(&environment, None, DatabaseFlags::empty())
+            .expect("should create lmdb trie store");
+        Arc::new(ret)
+    };
+
+    let global_state = LmdbGlobalState::empty(Arc::clone(&environment), Arc::clone(&trie_store))
+        .expect("should create empty lmdb global state");
+
+    EngineState::new(global_state)
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_init(
     env: JNIEnv,
     class: JClass,
+    context: JObject,
     data_dir: JString,
-    map_size: jlong,
-) -> jobject {
+    // map_size: jlong,
+) {
+
+    // let path = {
+    //         let mut dir = home_dir().expect("should get home dir");
+    //         dir.push(".casperlabs");
+    //         dir
+    //     }
+
     let data_dir: String = env.get_string(data_dir).expect("should get string").into();
 
-    let environment = Arc::new(LmdbEnvironment::new(&data_dir.into(), map_size as usize).expect("should create lmdb environment"));
+    let map_size = get_page_size().expect("should get page size");
+    let engine_state = get_engine_state(data_dir.into(), map_size * 4);
+    // let environment = Arc::new(LmdbEnvironment::new(&data_dir.into(), map_size).expect("should create lmdb environment"));
 
-    let trie_store = Arc::new(LmdbTrieStore::new(&environment, None, DatabaseFlags::empty())
-            .expect("should create lmdb trie store"));
+    // let trie_store = Arc::new(LmdbTrieStore::new(&environment, None, DatabaseFlags::empty())
+    //         .expect("should create lmdb trie store"));
 
-    let global_state = LmdbGlobalState::empty(environment, trie_store)
-        .expect("should create empty lmdb store");
+    // let global_state = LmdbGlobalState::empty(environment, trie_store)
+    //     .expect("should create empty lmdb store");
 
-    let engine_state = EngineState::new(global_state);
+    // let engine_state = EngineState::new(global_state);
 
 
-    let new_object = env.find_class("java/lang/Object").expect("should find class");
-    let allocated_object = env.alloc_object(new_object).expect("should alloc object");
+    // let new_object = env.find_class("java/lang/Object").expect("should find class");
+    // let allocated_object = env.alloc_object(new_object).expect("should alloc object");
 
-    env.set_rust_field(allocated_object, "engine_state", engine_state);
+    env.set_rust_field(context, "rustPrivPtr", engine_state).expect("should set rust field");
 
     println!("init: success");
-    allocated_object.into_inner()
+    // allocated_object.into_inner()
 }
 
+#[no_mangle]
+#[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_destroy(
     env: JNIEnv,
     class: JClass,
     context: JObject,
 ) {
-    let _engine_state: EngineState<LmdbGlobalState> = env.take_rust_field(context, "engine_state").expect("should take engine_state field");
+    let _engine_state: EngineState<LmdbGlobalState> = env.take_rust_field(context, "rustPrivPtr").expect("should take engine_state field");
     println!("destroy: success");
 }
 
 
 
+#[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_exec(
     env: JNIEnv,
@@ -114,11 +153,13 @@ pub extern "system" fn Java_ExecutionEngine_exec(
     unimplemented!();
 }
 
+#[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_commit(_env: JNIEnv, _class: JClass) -> jstring {
     unimplemented!();
 }
 
+#[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_query(
     _env: JNIEnv,
@@ -130,11 +171,13 @@ pub extern "system" fn Java_ExecutionEngine_query(
     unimplemented!();
 }
 
+#[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_validate(_env: JNIEnv, _class: JClass) -> jstring {
     unimplemented!();
 }
 
+#[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ExecutionEngine_run_genesis(_env: JNIEnv, _class: JClass) -> jstring {
     unimplemented!();

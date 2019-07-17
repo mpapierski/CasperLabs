@@ -34,6 +34,7 @@ parity-wasm = "0.31"
 [lib]
 name = "casperlabs_engine_server"
 path = "src/lib.rs"
+crate-type = ["cdylib"]
 
 [package.metadata.rpm.cargo]
 buildflags = ["--release"]

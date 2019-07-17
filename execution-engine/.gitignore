@@ -2,3 +2,6 @@
 comm/src/engine_server/ipc.rs
 comm/src/engine_server/ipc_grpc.rs
 comm/src/engine_server/state.rs
+
+*.class
+*.jar
