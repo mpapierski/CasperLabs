@@ -27,11 +27,6 @@ use wasm_prep::{Preprocessor, WasmiPreprocessor};
 use self::ipc_grpc::ExecutionEngineService;
 use self::mappings::*;
 
-pub mod ipc;
-pub mod ipc_grpc;
-pub mod mappings;
-pub mod state;
-
 const EXPECTED_PUBLIC_KEY_LENGTH: usize = 32;
 
 const METRIC_DURATION_COMMIT: &str = "commit_duration";

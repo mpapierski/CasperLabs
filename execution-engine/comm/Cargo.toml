@@ -29,12 +29,8 @@ protoc-rust-grpc = "0.6.1"
 [dev-dependencies]
 parity-wasm = "0.31"
 
-[[bin]]
-name = "casperlabs-engine-grpc-server"
-path = "src/main.rs"
-
 [lib]
-name = "casperlabs_engine_grpc_server"
+name = "casperlabs_engine_server"
 path = "src/lib.rs"
 
 [package.metadata.rpm.cargo]

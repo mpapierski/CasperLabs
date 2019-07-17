@@ -11,5 +11,3 @@ extern crate wasm_prep;
 
 #[cfg(test)]
 extern crate parity_wasm;
-
-pub mod engine_server;
