@@ -1105,7 +1105,7 @@ mod tests {
                 PublicKey::new([1; 32]), // 250
                 PublicKey::new([2; 32]), // 251
                 PublicKey::new([3; 32]), // 253
-                PublicKey::new([4; 32]), // 256 - error
+                PublicKey::new([4; 32]), // 256 - possible overflow
             ])),
             Weight::new(255u8)
         );
