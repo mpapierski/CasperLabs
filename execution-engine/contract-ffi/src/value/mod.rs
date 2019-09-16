@@ -5,15 +5,18 @@ pub mod uint;
 use crate::bytesrepr::{
     Error, FromBytes, ToBytes, U128_SIZE, U256_SIZE, U32_SIZE, U512_SIZE, U64_SIZE, U8_SIZE,
 };
+use crate::execution::Phase;
 use crate::key::{self, UREF_SIZE};
 use crate::uref::URef;
+use crate::value::account::Weight;
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::iter;
 use core::mem::size_of;
 
-pub use self::account::Account;
+pub use self::account::{Account, PublicKey, PurseId};
 pub use self::contract::Contract;
 pub use self::uint::{U128, U256, U512};
 
@@ -224,6 +227,26 @@ impl FromBytes for Value {
 }
 
 impl Value {
+    /// Creates new value based on a value that can be serialized to bytes.
+    pub fn from_serializable(t: impl ToBytes) -> Result<Value, Error> {
+        let serialized = t.to_bytes()?;
+        Ok(Value::ByteArray(serialized))
+    }
+
+    /// Tries to deserialize byte array into a value
+    pub fn try_deserialize<T: FromBytes>(self) -> Result<T, Error> {
+        match self {
+            Value::ByteArray(bytes) => {
+                let (value, _rest) = FromBytes::from_bytes(&bytes)?;
+                Ok(value)
+            }
+            _ => Err(Error::custom(format!(
+                "Unable to deserialize value of type {}",
+                self.type_string()
+            ))),
+        }
+    }
+
     pub fn type_string(&self) -> String {
         match self {
             Int32(_) => String::from("Value::Int32"),
@@ -279,6 +302,12 @@ from_try_from_impl!(key::Key, Key);
 from_try_from_impl!(account::Account, Account);
 from_try_from_impl!(contract::Contract, Contract);
 
+impl From<&str> for Value {
+    fn from(s: &str) -> Self {
+        Value::String(s.into())
+    }
+}
+
 impl From<URef> for Value {
     fn from(uref: URef) -> Self {
         Key(key::Key::URef(uref))
@@ -318,5 +347,91 @@ impl TryFrom<Value> for () {
         } else {
             Err(())
         }
+    }
+}
+
+impl FromBytes for Vec<Value> {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
+        let (size, mut stream): (u32, &[u8]) = FromBytes::from_bytes(bytes)?;
+        let mut result = Vec::new();
+        result.try_reserve_exact(size as usize)?;
+        for _ in 0..size {
+            let (s, rem): (Value, &[u8]) = FromBytes::from_bytes(stream)?;
+            result.push(s);
+            stream = rem;
+        }
+        Ok((result, stream))
+    }
+}
+
+impl ToBytes for Vec<Value> {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
+        let size = self.len() as u32;
+        let mut result: Vec<u8> = Vec::with_capacity(U32_SIZE);
+        result.extend(size.to_bytes()?);
+        result.extend(
+            self.iter()
+                .map(ToBytes::to_bytes)
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten(),
+        );
+        Ok(result)
+    }
+}
+
+// impl TryFrom<PurseId> for Value {
+//     type Error = Error;
+//     fn try_from(value: PurseId) -> Result<Value, Self::Error> {
+//         let bytes = value.to_bytes()?;
+//         Ok(Value::ByteArray(bytes))
+//     }
+// }
+
+impl From<PurseId> for Value {
+    fn from(value: PurseId) -> Value {
+        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
+    }
+}
+
+impl From<PublicKey> for Value {
+    fn from(value: PublicKey) -> Value {
+        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
+    }
+}
+
+impl From<[u8; 32]> for Value {
+    fn from(value: [u8; 32]) -> Value {
+        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
+    }
+}
+
+impl From<BTreeMap<PublicKey, U512>> for Value {
+    fn from(value: BTreeMap<PublicKey, U512>) -> Value {
+        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
+    }
+}
+
+impl From<Weight> for Value {
+    fn from(value: Weight) -> Value {
+        // TODO(mpapiersk): Value::U8 perhaps
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
+    }
+}
+
+impl From<Phase> for Value {
+    fn from(value: Phase) -> Value {
+        // TODO(mpapiersk): Value::U8 perhaps
+        let bytes = value.to_bytes().unwrap();
+        Value::ByteArray(bytes)
     }
 }

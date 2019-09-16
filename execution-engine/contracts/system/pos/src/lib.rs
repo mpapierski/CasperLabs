@@ -15,7 +15,7 @@ use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{BlockTime, PublicKey, PurseId};
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 use crate::error::{Error, PurseLookupError, Result, ResultExt};
 use crate::queue::{QueueEntry, QueueLocal, QueueProvider};
@@ -252,7 +252,8 @@ pub fn delegate() {
             if amount.is_zero() {
                 contract_api::revert(Error::BondTooSmall.into());
             }
-            let source_uref: URef = contract_api::get_arg(2);
+            // TODO(mpapierski): Identify additional Value variants
+            let source_uref: URef = contract_api::get_arg::<Value>(2).try_deserialize().unwrap();
             let source = PurseId::new(source_uref);
             // Transfer `amount` from the `source` purse to PoS internal purse.
             // POS_PURSE is a constant, it is the PurseID of the proof-of-stake contract's
@@ -278,7 +279,9 @@ pub fn delegate() {
         // Type of this method: `fn unbond(amount: Option<U512>)`
         "unbond" => {
             let validator = contract_api::get_caller();
-            let maybe_amount = contract_api::get_arg(1);
+            // TODO(mpapierski): Identify additional variants of Value
+            let maybe_amount: Option<U512> =
+                contract_api::get_arg::<Value>(1).try_deserialize().unwrap();
             unbond::<QueueLocal, ContractStakes>(maybe_amount, validator, timestamp)
                 .unwrap_or_revert();
 

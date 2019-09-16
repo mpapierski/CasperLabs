@@ -13,6 +13,7 @@ use contract_ffi::key::Key;
 use contract_ffi::system_contracts::mint;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{PublicKey, PurseId};
+use contract_ffi::value::Value;
 use contract_ffi::value::U512;
 use core::fmt::Write;
 
@@ -40,11 +41,17 @@ pub extern "C" fn pos_ext() {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let mint_uref: URef = contract_api::get_arg(Args::MintURef as u32);
+    // TODO(mpapierski): Identify additional Value variants
+    let mint_uref: URef = contract_api::get_arg::<Value>(Args::MintURef as u32)
+        .try_deserialize()
+        .unwrap();
     let mint = ContractPointer::URef(UPointer::new(mint_uref.addr(), AccessRights::READ));
 
+    // TODO(mpapierski): Identify additional Value variants
     let genesis_validators: BTreeMap<PublicKey, U512> =
-        contract_api::get_arg(Args::GenesisValidators as u32);
+        contract_api::get_arg::<Value>(Args::GenesisValidators as u32)
+            .try_deserialize()
+            .unwrap();
 
     // Add genesis validators to PoS contract object.
     // For now, we are storing validators in `known_urefs` map of the PoS contract

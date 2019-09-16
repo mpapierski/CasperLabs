@@ -15,7 +15,7 @@ use contract_ffi::contract_api::{
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{PublicKey, PurseId};
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 enum Error {
     GetPosOuterURef = 1000,
@@ -49,7 +49,11 @@ fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
 }
 
 fn unbond(pos: &ContractPointer, amount: Option<U512>) {
-    call_contract::<_, ()>(pos.clone(), &(POS_UNBOND, amount), &Vec::<Key>::new());
+    call_contract::<_, ()>(
+        pos.clone(),
+        &(POS_UNBOND, Value::from_serializable(amount).unwrap()),
+        &Vec::<Key>::new(),
+    );
 }
 
 const POS_BOND: &str = "bond";
@@ -91,7 +95,8 @@ pub extern "C" fn call() {
             revert(Error::UnableToSeedAccount as u32);
         }
     } else if command == TEST_UNBOND {
-        let maybe_amount: Option<U512> = get_arg(1);
+        // TODO(mpapierski): Identify additional Value variants
+        let maybe_amount: Option<U512> = get_arg::<Value>(1).try_deserialize().unwrap();
         unbond(&pos_pointer, maybe_amount);
     } else {
         revert(Error::UnknownCommand as u32);

@@ -70,7 +70,11 @@ fn main() {
             .with_deploy_hash([1; 32])
             .with_session_code(
                 "state_initializer.wasm",
-                (account_1_public_key, account_1_amount, account_2_public_key),
+                (
+                    account_1_public_key.value().to_vec(),
+                    account_1_amount,
+                    account_2_public_key.value().to_vec(),
+                ),
             )
             .with_payment_code(STANDARD_PAYMENT_WASM, (U512::from(MAX_PAYMENT),))
             .with_authorization_keys(&[genesis_public_key])

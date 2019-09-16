@@ -19,6 +19,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use argsparser::ArgsParser;
 use core::convert::{TryFrom, TryInto};
+use core::fmt::Debug;
 
 const MINT_NAME: &str = "mint";
 
@@ -213,15 +214,17 @@ pub fn store_function_at(name: &str, known_urefs: BTreeMap<String, Key>, uref: U
 /// Return the i-th argument passed to the host for the current module
 /// invocation. Note that this is only relevant to contracts stored on-chain
 /// since a contract deployed directly is not invoked with any arguments.
-pub fn get_arg<T: FromBytes>(i: u32) -> T {
+pub fn get_arg<T: TryFrom<Value>>(i: u32) -> T
+where <T as TryFrom<Value>>::Error: Debug {
     let arg_size = unsafe { ext_ffi::load_arg(i) };
     let dest_ptr = alloc_bytes(arg_size);
-    let arg_bytes = unsafe {
+    let arg_bytes: Vec<u8> = unsafe {
         ext_ffi::get_arg(dest_ptr);
         Vec::from_raw_parts(dest_ptr, arg_size, arg_size)
     };
     // TODO: better error handling (i.e. pass the `Result` on)
-    deserialize(&arg_bytes).unwrap()
+    let value: Value = deserialize(&arg_bytes).unwrap();
+    T::try_from(value).unwrap()
 }
 
 /// Return the unforgable reference known by the current module under the given

@@ -9,7 +9,7 @@ use contract_ffi::contract_api::pointers::{ContractPointer, UPointer};
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::PurseId;
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 enum Error {
     GetPosOuterURef = 1000,
@@ -43,7 +43,11 @@ fn bond(pos: ContractPointer, amount: U512, source: PurseId) {
 }
 
 fn unbond(pos: ContractPointer, amount: Option<U512>) {
-    contract_api::call_contract::<_, ()>(pos, &(POS_UNBOND, amount), &vec![]);
+    contract_api::call_contract::<_, ()>(
+        pos,
+        &(POS_UNBOND, Value::from_serializable(amount).unwrap()),
+        &vec![],
+    );
 }
 
 #[no_mangle]

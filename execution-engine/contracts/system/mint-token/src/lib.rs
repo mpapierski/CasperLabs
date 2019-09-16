@@ -23,7 +23,7 @@ use contract_ffi::key::Key;
 use contract_ffi::system_contracts::mint::error::Error;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::KEY_SIZE;
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 use capabilities::{ARef, RAWRef};
 use internal_purse_id::{DepositId, WithdrawId};
@@ -104,7 +104,8 @@ pub fn delegate() {
         }
 
         "balance" => {
-            let key: URef = contract_api::get_arg(1);
+            // TODO(mpapierski): Identify additional Value variants
+            let key: URef = contract_api::get_arg::<Value>(1).try_deserialize().unwrap();
             let purse_id: WithdrawId = WithdrawId::from_uref(key).unwrap();
             let balance_uref = mint.lookup(purse_id);
             let balance: Option<U512> = balance_uref.map(|uref| contract_api::read(uref.into()));
@@ -112,8 +113,10 @@ pub fn delegate() {
         }
 
         "transfer" => {
-            let source: URef = contract_api::get_arg(1);
-            let target: URef = contract_api::get_arg(2);
+            // TODO(mpapierski): Identify additional Value variants
+            let source: URef = contract_api::get_arg::<Value>(1).try_deserialize().unwrap();
+            // TODO(mpapierski): Identify additional Value variants
+            let target: URef = contract_api::get_arg::<Value>(2).try_deserialize().unwrap();
             let amount: U512 = contract_api::get_arg(3);
 
             let source: WithdrawId = match WithdrawId::from_uref(source) {

@@ -1,4 +1,5 @@
 use crate::bytesrepr;
+use crate::value::Value;
 use alloc::vec::Vec;
 use bytesrepr::{Error, ToBytes};
 
@@ -19,11 +20,13 @@ impl ArgsParser for () {
 
 macro_rules! impl_argsparser_tuple {
     ( $($name:ident)+) => (
-        impl<$($name: ToBytes),*> ArgsParser for ($($name,)*) {
+        impl<$($name: Into<Value> + Clone),*> ArgsParser for ($($name,)*) {
             #[allow(non_snake_case)]
             fn parse(&self) -> Result<Vec<Vec<u8>>, Error> {
-                let ($(ref $name,)+) = *self;
-                Ok(vec![$(ToBytes::to_bytes($name)?,)+])
+                let (ref $($name,)+) = self;
+                // TODO: This has to take ownership of $name by cloning it as &T to &Value conversion is not possible. Changing the arguments of &self to self could solve problem of excess clones but requires a lot of public API changes.
+                let values: &[Value] = &[$($name.clone().into(),)+];
+                values.into_iter().map(ToBytes::to_bytes).collect()
             }
         }
     );

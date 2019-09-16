@@ -4,6 +4,7 @@ use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::URef;
 use contract_ffi::value::account::BlockTime;
+use contract_ffi::value::Value;
 use engine_core::engine_state::executable_deploy_item::ExecutableDeployItem;
 use engine_core::engine_state::execution_effect::ExecutionEffect;
 use engine_core::engine_state::EngineState;
@@ -12,7 +13,7 @@ use engine_core::execution::AddressGenerator;
 use engine_core::runtime_context::RuntimeContext;
 use engine_grpc_server::engine_server::ipc_grpc::ExecutionEngineService;
 use engine_shared::gas::Gas;
-use engine_shared::newtypes::CorrelationId;
+use engine_shared::newtypes::{CorrelationId, Validated};
 use engine_storage::global_state::StateProvider;
 use engine_wasm_prep::wasm_costs::WasmCosts;
 use engine_wasm_prep::WasmiPreprocessor;
@@ -82,11 +83,20 @@ where
         from_account
     };
 
+    let validated_args = arguments
+        .into_iter()
+        .map(|value_bytes| {
+            let (value, _rest) = Value::from_bytes(&value_bytes).unwrap();
+            value
+        })
+        .map(|value| Validated::new(value, Validated::valid).unwrap())
+        .collect();
+
     let context = RuntimeContext::new(
         Rc::clone(&tracking_copy),
         &mut uref_lookup,
         known_urefs,
-        arguments,
+        validated_args,
         BTreeSet::new(),
         &account,
         base_key,

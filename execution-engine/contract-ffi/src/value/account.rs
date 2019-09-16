@@ -1,6 +1,7 @@
 use crate::bytesrepr::{Error, FromBytes, ToBytes, U32_SIZE, U64_SIZE, U8_SIZE};
 use crate::key::{addr_to_hex, Key, UREF_SIZE};
 use crate::uref::{AccessRights, URef, UREF_SIZE_SERIALIZED};
+use crate::value::Value;
 use alloc::collections::{btree_map::BTreeMap, btree_set::BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -21,6 +22,14 @@ pub struct TryFromSliceForPublicKeyError(());
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PurseId(URef);
+
+impl From<Value> for PurseId {
+    fn from(value: Value) -> PurseId {
+        value
+            .try_deserialize()
+            .expect("should deserialize public key from value")
+    }
+}
 
 impl PurseId {
     pub fn new(uref: URef) -> Self {
@@ -284,6 +293,14 @@ pub const WEIGHT_SIZE: usize = U8_SIZE;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PublicKey([u8; KEY_SIZE]);
+
+impl From<Value> for PublicKey {
+    fn from(value: Value) -> PublicKey {
+        value
+            .try_deserialize()
+            .expect("should deserialize public key from value")
+    }
+}
 
 impl Display for PublicKey {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {

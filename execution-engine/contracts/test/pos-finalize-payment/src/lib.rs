@@ -11,7 +11,7 @@ use contract_ffi::contract_api::{self, PurseTransferResult};
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{PublicKey, PurseId};
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 enum Error {
     GetPosOuterURef = 1,
@@ -67,9 +67,14 @@ pub extern "C" fn call() {
     };
 
     let payment_amount: U512 = contract_api::get_arg(0);
-    let refund_purse_flag: u8 = contract_api::get_arg(1);
-    let maybe_amount_spent: Option<U512> = contract_api::get_arg(2);
-    let maybe_account: Option<PublicKey> = contract_api::get_arg(3);
+    // TODO(mpapierski): Identify additional Value variants
+    let refund_purse_flag: u8 = contract_api::get_arg::<Value>(1).try_deserialize().unwrap();
+    // TODO(mpapierski): Identify additional Value variants
+    let maybe_amount_spent: Option<U512> =
+        contract_api::get_arg::<Value>(2).try_deserialize().unwrap();
+    // TODO(mpapierski): Identify additional Value variants
+    let maybe_account: Option<PublicKey> =
+        contract_api::get_arg::<Value>(3).try_deserialize().unwrap();
 
     submit_payment(&pos_pointer, payment_amount);
     if refund_purse_flag != 0 {

@@ -37,7 +37,7 @@ pub struct RuntimeContext<'a, R> {
     known_urefs: HashMap<Address, HashSet<AccessRights>>,
     // Original account for read only tasks taken before execution
     account: &'a Account,
-    args: Vec<Vec<u8>>,
+    args: Vec<Validated<Value>>,
     authorization_keys: BTreeSet<PublicKey>,
     // Key pointing to the entity we are currently running
     //(could point at an account or contract in the global state)
@@ -62,7 +62,7 @@ where
         state: Rc<RefCell<TrackingCopy<R>>>,
         uref_lookup: &'a mut BTreeMap<String, Key>,
         known_urefs: HashMap<Address, HashSet<AccessRights>>,
-        args: Vec<Vec<u8>>,
+        args: Vec<Validated<Value>>,
         authorization_keys: BTreeSet<PublicKey>,
         account: &'a Account,
         base_key: Key,
@@ -212,7 +212,7 @@ where
         &self.account
     }
 
-    pub fn args(&self) -> &Vec<Vec<u8>> {
+    pub fn args(&self) -> &[Validated<Value>] {
         &self.args
     }
 

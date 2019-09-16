@@ -14,7 +14,7 @@ use casperlabs_engine_tests::support::test_support::{
     STANDARD_PAYMENT_CONTRACT,
 };
 use contract_ffi::value::account::PublicKey;
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 use engine_core::engine_state::EngineConfig;
 use engine_core::engine_state::MAX_PAYMENT;
 use engine_storage::global_state::lmdb::LmdbGlobalState;
@@ -44,9 +44,10 @@ fn bootstrap(accounts: &[PublicKey]) -> (WasmTestResult<LmdbGlobalState>, TempDi
             STANDARD_PAYMENT_CONTRACT,
             (U512::from(MAX_PAYMENT),),
             "create_accounts.wasm",
-            (accounts_bytes, amount), //args
-            DEFAULT_BLOCK_TIME,       // blocktime
-            [1; 32],                  // deploy_hash
+            // TODO(mpapierski): Identify additional Value variants
+            (Value::from_serializable(accounts_bytes).unwrap(), amount), //args
+            DEFAULT_BLOCK_TIME,                                          // blocktime
+            [1; 32],                                                     // deploy_hash
         )
         .expect_success()
         .commit()

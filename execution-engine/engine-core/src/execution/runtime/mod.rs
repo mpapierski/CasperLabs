@@ -18,6 +18,7 @@ use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLIC_KEY_SIZE};
 use contract_ffi::value::{Account, Value, U512};
 use engine_shared::gas::Gas;
+use engine_shared::newtypes::Validated;
 use engine_storage::global_state::StateReader;
 
 use super::{Error, MINT_NAME, POS_NAME};
@@ -123,7 +124,7 @@ pub fn extract_access_rights_from_keys<I: IntoIterator<Item = Key>>(
 
 fn sub_call<R: StateReader<Key, Value>>(
     parity_module: Module,
-    args: Vec<Vec<u8>>,
+    args: Vec<Validated<Value>>,
     refs: &mut BTreeMap<String, Key>,
     key: Key,
     current_runtime: &mut Runtime<R>,
@@ -300,7 +301,9 @@ where
     /// to the caller.
     pub fn load_arg(&mut self, i: usize) -> Result<usize, Trap> {
         if i < self.context.args().len() {
-            self.host_buf = self.context.args()[i].clone();
+            self.host_buf = self.context.args()[i]
+                .to_bytes()
+                .map_err(Error::BytesRepr)?;
             Ok(self.host_buf.len())
         } else {
             Err(Error::ArgIndexOutOfBounds(i).into())
@@ -436,7 +439,7 @@ where
                 None => Err(Error::KeyNotFound(key)),
                 Some(value) => {
                     if let Value::Contract(contract) = value {
-                        let args: Vec<Vec<u8>> = deserialize(&args_bytes)?;
+                        let args: Vec<Value> = deserialize(&args_bytes)?;
                         let module = parity_wasm::deserialize_buffer(contract.bytes())?;
 
                         Ok((
@@ -455,10 +458,15 @@ where
             }
         }?;
 
+        let validated_args = args
+            .into_iter()
+            .map(|value| Validated::new(value, Validated::valid).unwrap())
+            .collect();
+
         let extra_urefs = self.context.deserialize_keys(&urefs_bytes)?;
         let result = sub_call(
             module,
-            args,
+            validated_args,
             &mut refs,
             key,
             self,

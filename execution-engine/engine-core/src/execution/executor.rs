@@ -12,6 +12,7 @@ use contract_ffi::value::account::{BlockTime, PublicKey};
 use contract_ffi::value::{Account, Value};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::CorrelationId;
+use engine_shared::newtypes::Validated;
 use engine_storage::global_state::StateReader;
 
 use crate::engine_state::execution_result::ExecutionResult;
@@ -159,11 +160,11 @@ impl Executor<Module> for WasmiExecutor {
         // only nonce update can be returned.
         let effects_snapshot = tc.borrow().effect();
 
-        let arguments: Vec<Vec<u8>> = if args.is_empty() {
+        let arguments: Vec<Value> = if args.is_empty() {
             Vec::new()
         } else {
-            // TODO: figure out how this works with the cost model
-            // https://casperlabs.atlassian.net/browse/EE-239
+            // // TODO: figure out how this works with the cost model
+            // // https://casperlabs.atlassian.net/browse/EE-239
             on_fail_charge!(
                 bytesrepr::deserialize(args),
                 Gas::from_u64(args.len() as u64),
@@ -171,11 +172,15 @@ impl Executor<Module> for WasmiExecutor {
             )
         };
 
+        let validated_args = arguments
+            .into_iter()
+            .map(|value| Validated::new(value, Validated::valid).unwrap())
+            .collect();
         let context = RuntimeContext::new(
             tc,
             &mut uref_lookup_local,
             known_urefs,
-            arguments,
+            validated_args,
             authorized_keys,
             &account,
             base_key,
@@ -236,7 +241,7 @@ impl Executor<Module> for WasmiExecutor {
         // can be returned.
         let effects_snapshot = state.borrow().effect();
 
-        let args: Vec<Vec<u8>> = if args.is_empty() {
+        let args: Vec<Value> = if args.is_empty() {
             Vec::new()
         } else {
             on_fail_charge!(
@@ -246,11 +251,17 @@ impl Executor<Module> for WasmiExecutor {
             )
         };
 
+
+        let validated_args = args
+            .into_iter()
+            .map(|value| Validated::new(value, Validated::valid).unwrap())
+            .collect();
+
         let context = RuntimeContext::new(
             state,
             &mut uref_lookup,
             known_urefs,
-            args,
+            validated_args,
             authorization_keys,
             &account,
             base_key,
@@ -337,11 +348,16 @@ impl Executor<Module> for WasmiExecutor {
     {
         let known_keys = extract_access_rights_from_keys(keys.values().cloned());
 
-        let args: Vec<Vec<u8>> = if args.is_empty() {
+        let args: Vec<Value> = if args.is_empty() {
             Vec::new()
         } else {
             bytesrepr::deserialize(args)?
         };
+
+        let validated_args = args
+            .into_iter()
+            .map(|value| Validated::new(value, Validated::valid).unwrap())
+            .collect();
 
         let gas_counter = Gas::default();
 
@@ -349,7 +365,7 @@ impl Executor<Module> for WasmiExecutor {
             state,
             keys,
             known_keys.clone(),
-            args,
+            validated_args,
             authorization_keys.clone(),
             account,
             base_key,

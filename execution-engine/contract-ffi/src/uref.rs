@@ -6,6 +6,7 @@ use crate::base16;
 use crate::bytesrepr;
 use crate::bytesrepr::{OPTION_SIZE, U32_SIZE};
 use crate::contract_api::pointers::UPointer;
+use crate::value::Value;
 
 pub const UREF_ADDR_SIZE: usize = 32;
 pub const ACCESS_RIGHTS_SIZE: usize = 1;
@@ -222,6 +223,15 @@ impl<T> From<UPointer<T>> for URef {
     fn from(uptr: UPointer<T>) -> Self {
         let UPointer(id, access_rights, _) = uptr;
         URef(id, Some(access_rights))
+    }
+}
+
+impl From<Value> for URef {
+    fn from(value: Value) -> URef {
+        // TODO(mpapierski): Identify additional Value variants
+        value
+            .try_deserialize()
+            .expect("should deserialize uref from value")
     }
 }
 
