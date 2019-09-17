@@ -25,9 +25,10 @@ pub struct PurseId(URef);
 
 impl From<Value> for PurseId {
     fn from(value: Value) -> PurseId {
-        value
-            .try_deserialize()
-            .expect("should deserialize public key from value")
+        match value {
+            Value::Key(Key::URef(uref)) => PurseId::new(uref),
+            _ => panic!("Expected Key variant of the Value"),
+        }
     }
 }
 

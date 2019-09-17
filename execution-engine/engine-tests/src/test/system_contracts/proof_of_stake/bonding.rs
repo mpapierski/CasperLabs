@@ -39,7 +39,7 @@ fn get_pos_bonding_purse_balance(builder: &InMemoryWasmTestBuilder) -> U512 {
 }
 
 const GENESIS_VALIDATOR_STAKE: u64 = 50_000;
-const ACCOUNT_1_SEED_AMOUNT: u64 = MAX_PAYMENT * 2;
+const ACCOUNT_1_SEED_AMOUNT: u64 = MAX_PAYMENT * 3;
 
 const GENESIS_ACCOUNT_STAKE: u64 = 100_000;
 const ACCOUNT_1_STAKE: u64 = 42_000;

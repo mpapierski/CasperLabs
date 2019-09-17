@@ -160,7 +160,7 @@ impl Executor<Module> for WasmiExecutor {
         // only nonce update can be returned.
         let effects_snapshot = tc.borrow().effect();
 
-        let arguments: Vec<Value> = if args.is_empty() {
+        let arguments: Vec<Vec<u8>> = if args.is_empty() {
             Vec::new()
         } else {
             // // TODO: figure out how this works with the cost model
@@ -171,11 +171,19 @@ impl Executor<Module> for WasmiExecutor {
                 effects_snapshot
             )
         };
+        let arg_values = arguments
+            .into_iter()
+            .map(|value_bytes| {
+                let (value, _) = FromBytes::from_bytes(&value_bytes).unwrap();
+                value
+            })
+            .collect::<Vec<Value>>();
 
-        let validated_args = arguments
+        let validated_args = arg_values
             .into_iter()
             .map(|value| Validated::new(value, Validated::valid).unwrap())
             .collect();
+
         let context = RuntimeContext::new(
             tc,
             &mut uref_lookup_local,
@@ -241,7 +249,7 @@ impl Executor<Module> for WasmiExecutor {
         // can be returned.
         let effects_snapshot = state.borrow().effect();
 
-        let args: Vec<Value> = if args.is_empty() {
+        let args_bytes: Vec<Vec<u8>> = if args.is_empty() {
             Vec::new()
         } else {
             on_fail_charge!(
@@ -251,8 +259,18 @@ impl Executor<Module> for WasmiExecutor {
             )
         };
 
+        let arg_values: Result<Vec<Value>, _> = args_bytes
+            .into_iter()
+            .map(|arg_bytes| Value::from_bytes(&arg_bytes).map(|(value, _rest)| value))
+            .collect();
 
-        let validated_args = args
+        let arg_values = on_fail_charge!(
+            arg_values,
+            Gas::from_u64(args.len() as u64),
+            effects_snapshot
+        );
+
+        let validated_args = arg_values
             .into_iter()
             .map(|value| Validated::new(value, Validated::valid).unwrap())
             .collect();
@@ -351,7 +369,11 @@ impl Executor<Module> for WasmiExecutor {
         let args: Vec<Value> = if args.is_empty() {
             Vec::new()
         } else {
-            bytesrepr::deserialize(args)?
+            let args_bytes: Vec<Vec<u8>> = bytesrepr::deserialize(args)?;
+            args_bytes
+                .into_iter()
+                .map(|arg_bytes| FromBytes::from_bytes(&arg_bytes).map(|(value, _rest)| value))
+                .collect::<Result<_, _>>()?
         };
 
         let validated_args = args

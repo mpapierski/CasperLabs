@@ -43,7 +43,7 @@ fn get_pos_contract() -> ContractPointer {
 fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
     call_contract::<_, ()>(
         pos.clone(),
-        &(POS_BOND, *amount, source),
+        &(POS_BOND, *amount, source.value()),
         &vec![purse_to_key(source)],
     );
 }

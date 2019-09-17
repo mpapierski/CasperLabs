@@ -252,8 +252,7 @@ pub fn delegate() {
             if amount.is_zero() {
                 contract_api::revert(Error::BondTooSmall.into());
             }
-            // TODO(mpapierski): Identify additional Value variants
-            let source_uref: URef = contract_api::get_arg::<Value>(2).try_deserialize().unwrap();
+            let source_uref: URef = contract_api::get_arg(2);
             let source = PurseId::new(source_uref);
             // Transfer `amount` from the `source` purse to PoS internal purse.
             // POS_PURSE is a constant, it is the PurseID of the proof-of-stake contract's
@@ -346,6 +345,7 @@ pub fn delegate() {
         }
         "finalize_payment" => {
             let amount_spent: U512 = contract_api::get_arg(1);
+            // TODO(mpapierski): Identify additional Value variants
             let account: PublicKey = contract_api::get_arg(2);
             finalize_payment(amount_spent, account);
         }

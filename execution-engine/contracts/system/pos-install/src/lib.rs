@@ -41,10 +41,7 @@ pub extern "C" fn pos_ext() {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    // TODO(mpapierski): Identify additional Value variants
-    let mint_uref: URef = contract_api::get_arg::<Value>(Args::MintURef as u32)
-        .try_deserialize()
-        .unwrap();
+    let mint_uref: URef = contract_api::get_arg(Args::MintURef as u32);
     let mint = ContractPointer::URef(UPointer::new(mint_uref.addr(), AccessRights::READ));
 
     // TODO(mpapierski): Identify additional Value variants

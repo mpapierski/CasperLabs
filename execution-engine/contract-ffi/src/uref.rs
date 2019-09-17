@@ -6,6 +6,7 @@ use crate::base16;
 use crate::bytesrepr;
 use crate::bytesrepr::{OPTION_SIZE, U32_SIZE};
 use crate::contract_api::pointers::UPointer;
+use crate::key::Key;
 use crate::value::Value;
 
 pub const UREF_ADDR_SIZE: usize = 32;
@@ -228,10 +229,10 @@ impl<T> From<UPointer<T>> for URef {
 
 impl From<Value> for URef {
     fn from(value: Value) -> URef {
-        // TODO(mpapierski): Identify additional Value variants
-        value
-            .try_deserialize()
-            .expect("should deserialize uref from value")
+        match value {
+            Value::Key(Key::URef(uref)) => uref,
+            _ => panic!("Invalid Value variant"),
+        }
     }
 }
 

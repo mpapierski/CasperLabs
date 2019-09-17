@@ -9,7 +9,7 @@ use itertools::Itertools;
 use parity_wasm::elements::Module;
 use wasmi::{ImportsBuilder, MemoryRef, ModuleInstance, ModuleRef, Trap, TrapKind};
 
-use contract_ffi::bytesrepr::{deserialize, ToBytes, U32_SIZE};
+use contract_ffi::bytesrepr::{deserialize, FromBytes, ToBytes, U32_SIZE};
 use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::contract_api::{PurseTransferResult, TransferResult};
 use contract_ffi::key::Key;
@@ -439,7 +439,13 @@ where
                 None => Err(Error::KeyNotFound(key)),
                 Some(value) => {
                     if let Value::Contract(contract) = value {
-                        let args: Vec<Value> = deserialize(&args_bytes)?;
+                        let args_bytes: Vec<Vec<u8>> = deserialize(&args_bytes)?;
+                        let args: Vec<Value> = args_bytes
+                            .into_iter()
+                            .map(|arg_bytes| {
+                                Value::from_bytes(&arg_bytes).map(|(value, _rest)| value)
+                            })
+                            .collect::<Result<Vec<Value>, _>>()?;
                         let module = parity_wasm::deserialize_buffer(contract.bytes())?;
 
                         Ok((

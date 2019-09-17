@@ -980,7 +980,9 @@ where
             let proof_of_stake_args = {
                 //((gas spent during payment code execution) + (gas spent during session code execution)) * conv_rate
                 let finalize_cost_motes: Motes = Motes::from_gas(execution_result_builder.total_cost(), CONV_RATE).expect("motes overflow");
-                let args = ("finalize_payment", finalize_cost_motes.value(), account_addr.to_vec());
+                // TODO(mpapierski): Identify new Value vairants
+                let account = PublicKey::new(account_addr);
+                let args = ("finalize_payment", finalize_cost_motes.value(), account);
                 ArgsParser::parse(&args)
                     .and_then(|args| args.to_bytes())
                     .expect("args should parse")

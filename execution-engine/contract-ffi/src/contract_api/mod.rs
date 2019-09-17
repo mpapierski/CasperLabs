@@ -215,7 +215,9 @@ pub fn store_function_at(name: &str, known_urefs: BTreeMap<String, Key>, uref: U
 /// invocation. Note that this is only relevant to contracts stored on-chain
 /// since a contract deployed directly is not invoked with any arguments.
 pub fn get_arg<T: TryFrom<Value>>(i: u32) -> T
-where <T as TryFrom<Value>>::Error: Debug {
+where
+    <T as TryFrom<Value>>::Error: Debug,
+{
     let arg_size = unsafe { ext_ffi::load_arg(i) };
     let dest_ptr = alloc_bytes(arg_size);
     let arg_bytes: Vec<u8> = unsafe {

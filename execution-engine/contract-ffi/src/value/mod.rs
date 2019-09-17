@@ -6,7 +6,7 @@ use crate::bytesrepr::{
     Error, FromBytes, ToBytes, U128_SIZE, U256_SIZE, U32_SIZE, U512_SIZE, U64_SIZE, U8_SIZE,
 };
 use crate::execution::Phase;
-use crate::key::{self, UREF_SIZE};
+use crate::key::{self, Key, UREF_SIZE};
 use crate::uref::URef;
 use crate::value::account::Weight;
 use alloc::collections::BTreeMap;
@@ -380,19 +380,10 @@ impl ToBytes for Vec<Value> {
     }
 }
 
-// impl TryFrom<PurseId> for Value {
-//     type Error = Error;
-//     fn try_from(value: PurseId) -> Result<Value, Self::Error> {
-//         let bytes = value.to_bytes()?;
-//         Ok(Value::ByteArray(bytes))
-//     }
-// }
-
 impl From<PurseId> for Value {
     fn from(value: PurseId) -> Value {
         // TODO: This might return Value::URef (or either Value::PurseId) in second pass
-        let bytes = value.to_bytes().unwrap();
-        Value::ByteArray(bytes)
+        Value::Key(Key::URef(value.value()))
     }
 }
 
