@@ -46,7 +46,7 @@ pub extern "C" fn call() {
         let uref1: URef = new_uref(U512::from(0)).into();
         add_uref("uref1", &Key::URef(uref1));
         // do_nothing doesn't do anything. It SHOULD not forward the internal RNG.
-        let result: String = contract_api::call_contract(do_nothing.clone(), &(), &vec![]);
+        let result: String = contract_api::call_contract(do_nothing.clone(), &());
         assert_eq!(result, "Hello, world!");
         let uref2: URef = new_uref(U512::from(1)).into();
         add_uref("uref2", &Key::URef(uref2));
@@ -54,7 +54,7 @@ pub extern "C" fn call() {
         let uref1: URef = new_uref(U512::from(0)).into();
         add_uref("uref1", &Key::URef(uref1));
         // do_something returns a new uref, and it should forward the internal RNG.
-        let uref2: URef = contract_api::call_contract(do_something.clone(), &(), &vec![]);
+        let uref2: URef = contract_api::call_contract(do_something.clone(), &());
         add_uref("uref2", &Key::URef(uref2));
     }
 }

@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api;
@@ -35,7 +33,6 @@ pub extern "C" fn call() {
             UNBOND_METHOD_NAME,
             Value::from_serializable(unbond_amount).unwrap(),
         ),
-        &vec![],
     )
 }
 

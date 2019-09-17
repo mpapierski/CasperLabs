@@ -36,5 +36,5 @@ pub extern "C" fn call() {
         0 => None,
         amount => Some(amount.into()),
     };
-    let _result: () = call_contract(pos_contract, &("unbond", unbond_amount), &vec![]);
+    let _result: () = call_contract(pos_contract, &("unbond", unbond_amount));
 }

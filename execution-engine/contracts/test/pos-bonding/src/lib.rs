@@ -1,10 +1,9 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
-use alloc::prelude::v1::{String, Vec};
+use alloc::prelude::v1::String;
 
 use contract_ffi::contract_api::pointers::{ContractPointer, UPointer};
 use contract_ffi::contract_api::{
@@ -25,10 +24,6 @@ enum Error {
     UnknownCommand = 1004,
 }
 
-fn purse_to_key(p: PurseId) -> Key {
-    Key::URef(p.value())
-}
-
 fn get_pos_contract() -> ContractPointer {
     let outer: UPointer<Key> = get_uref("pos")
         .and_then(Key::to_u_ptr)
@@ -41,18 +36,13 @@ fn get_pos_contract() -> ContractPointer {
 }
 
 fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
-    call_contract::<_, ()>(
-        pos.clone(),
-        &(POS_BOND, *amount, source.value()),
-        &vec![purse_to_key(source)],
-    );
+    call_contract::<_, ()>(pos.clone(), &(POS_BOND, *amount, source.value()));
 }
 
 fn unbond(pos: &ContractPointer, amount: Option<U512>) {
     call_contract::<_, ()>(
         pos.clone(),
         &(POS_UNBOND, Value::from_serializable(amount).unwrap()),
-        &Vec::<Key>::new(),
     );
 }
 

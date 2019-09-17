@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -14,10 +13,6 @@ use contract_ffi::value::U512;
 enum Error {
     GetPosOuterURef = 1000,
     GetPosInnerURef = 1001,
-}
-
-fn purse_to_key(p: PurseId) -> Key {
-    Key::URef(p.value())
 }
 
 fn get_pos_contract() -> ContractPointer {
@@ -34,11 +29,7 @@ fn get_pos_contract() -> ContractPointer {
 const POS_BOND: &str = "bond";
 
 fn bond(pos: ContractPointer, amount: &U512, source: PurseId) {
-    contract_api::call_contract::<_, ()>(
-        pos,
-        &(POS_BOND, *amount, source),
-        &vec![purse_to_key(source)],
-    );
+    contract_api::call_contract::<_, ()>(pos, &(POS_BOND, *amount, source));
 }
 
 #[no_mangle]

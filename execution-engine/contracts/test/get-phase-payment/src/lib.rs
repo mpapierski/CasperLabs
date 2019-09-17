@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api::pointers::UPointer;
@@ -32,8 +30,7 @@ fn standard_payment(amount: U512) {
         .to_c_ptr()
         .unwrap_or_else(|| contract_api::revert(Error::GetPosInnerURef as u32));
 
-    let payment_purse: PurseId =
-        contract_api::call_contract(pos_contract, &(GET_PAYMENT_PURSE,), &vec![]);
+    let payment_purse: PurseId = contract_api::call_contract(pos_contract, &(GET_PAYMENT_PURSE,));
 
     if let PurseTransferResult::TransferError =
         contract_api::transfer_from_purse_to_purse(main_purse, payment_purse, amount)

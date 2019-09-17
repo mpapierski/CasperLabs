@@ -41,7 +41,6 @@ pub extern "C" fn call() {
             let _result: () = call_contract(
                 pos_contract,
                 &("bond", bond_amount, bonding_purse),
-                &vec![Key::URef(bonding_purse.value())],
             );
         }
 

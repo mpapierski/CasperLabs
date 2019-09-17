@@ -5,7 +5,6 @@ extern crate alloc;
 extern crate contract_ffi;
 
 use alloc::string::{String, ToString};
-use alloc::vec::Vec;
 
 use contract_ffi::contract_api;
 use contract_ffi::contract_api::pointers::{ContractPointer, UPointer};
@@ -25,7 +24,7 @@ pub extern "C" fn call() {
         .to_c_ptr()
         .unwrap_or_else(|| contract_api::revert(GET_ARG_ERROR));
 
-    let reference: URef = contract_api::call_contract(contract_pointer, &(), &Vec::new());
+    let reference: URef = contract_api::call_contract(contract_pointer, &());
 
     let forged_reference: UPointer<String> = {
         let ret = URef::new(reference.addr(), AccessRights::READ_ADD_WRITE);

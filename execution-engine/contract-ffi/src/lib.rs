@@ -82,9 +82,6 @@ mod ext_ffi {
             key_size: usize,
             args_ptr: *const u8,
             args_size: usize,
-            // extra urefs known by the caller to make available to the callee
-            extra_urefs_ptr: *const u8,
-            extra_urefs_size: usize,
         ) -> usize;
         pub fn get_call_result(res_ptr: *mut u8); //can only be called after `call_contract`
         pub fn get_uref(name_ptr: *const u8, name_size: usize) -> usize;

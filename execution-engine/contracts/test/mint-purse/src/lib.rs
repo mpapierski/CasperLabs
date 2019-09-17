@@ -1,11 +1,8 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api;
-use contract_ffi::key::Key;
 use contract_ffi::system_contracts::mint;
 use contract_ffi::uref::URef;
 use contract_ffi::value::account::PurseId;
@@ -23,7 +20,7 @@ fn mint_purse(amount: U512) -> Result<PurseId, mint::error::Error> {
     let mint = contract_api::get_mint().expect("mint contract should exist");
 
     let result: Result<URef, mint::error::Error> =
-        contract_api::call_contract(mint, &("mint", amount), &vec![]);
+        contract_api::call_contract(mint, &("mint", amount));
 
     result.map(PurseId::new)
 }
@@ -37,11 +34,7 @@ pub extern "C" fn call() {
     let mint = contract_api::get_mint()
         .unwrap_or_else(|| contract_api::revert(Error::MintNotFound as u32));
 
-    let balance: Option<U512> = contract_api::call_contract(
-        mint,
-        &("balance", new_purse),
-        &vec![Key::URef(new_purse.value())],
-    );
+    let balance: Option<U512> = contract_api::call_contract(mint, &("balance", new_purse));
 
     match balance {
         None => contract_api::revert(Error::BalanceNotFound as u32),

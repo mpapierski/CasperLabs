@@ -1,8 +1,6 @@
 #![no_std]
 #![feature(cell_update)]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api;
@@ -32,11 +30,7 @@ fn malicious_revenue_stealing_contract() {
     let purse = contract_api::create_purse();
     let pos = get_pos();
 
-    contract_api::call_contract::<_, ()>(
-        pos,
-        &(SET_REFUND_PURSE, purse),
-        &vec![purse.value().into()],
-    );
+    contract_api::call_contract::<_, ()>(pos, &(SET_REFUND_PURSE, purse));
 }
 
 #[no_mangle]

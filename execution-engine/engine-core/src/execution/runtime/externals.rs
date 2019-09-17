@@ -143,22 +143,16 @@ where
                 // args(1) = size of key
                 // args(2) = pointer to function arguments in Wasm memory
                 // args(3) = size of arguments
-                // args(4) = pointer to extra supplied urefs
-                // args(5) = size of extra urefs
-                let (key_ptr, key_size, args_ptr, args_size, extra_urefs_ptr, extra_urefs_size) =
-                    Args::parse(args)?;
+                let (key_ptr, key_size, args_ptr, args_size) = Args::parse(args)?;
 
                 // We have to explicitly tell rustc what type we expect as it cannot infer it
                 // otherwise.
                 let _args_size_u32: u32 = args_size;
-                let _extra_urefs_size_u32: u32 = extra_urefs_size;
 
                 let key_contract: Key = self.key_from_mem(key_ptr, key_size)?;
                 let args_bytes: Vec<u8> = self.bytes_from_mem(args_ptr, args_size as usize)?;
-                let urefs_bytes =
-                    self.bytes_from_mem(extra_urefs_ptr, extra_urefs_size as usize)?;
 
-                let size = self.call_contract(key_contract, args_bytes, urefs_bytes)?;
+                let size = self.call_contract(key_contract, args_bytes)?;
                 Ok(Some(RuntimeValue::I32(size as i32)))
             }
 

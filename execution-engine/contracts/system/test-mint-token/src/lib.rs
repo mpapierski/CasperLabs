@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -21,23 +20,18 @@ pub extern "C" fn call() {
     //let x = contract_api::get_uref("mint");
 
     let amount1 = U512::from(100);
-    let purse1: Key = contract_api::call_contract(mint.clone(), &("create", amount1), &vec![]);
+    let purse1: Key = contract_api::call_contract(mint.clone(), &("create", amount1));
 
     let amount2 = U512::from(300);
-    let purse2: Key = contract_api::call_contract(mint.clone(), &("create", amount2), &vec![]);
+    let purse2: Key = contract_api::call_contract(mint.clone(), &("create", amount2));
 
-    let result: String = contract_api::call_contract(
-        mint.clone(),
-        &("transfer", purse1, purse2, U512::from(70)),
-        &vec![purse1],
-    );
+    let result: String =
+        contract_api::call_contract(mint.clone(), &("transfer", purse1, purse2, U512::from(70)));
 
     assert!(&result == "Success!");
 
-    let new_amount1: Option<U512> =
-        contract_api::call_contract(mint.clone(), &("balance", purse1), &vec![purse1]);
-    let new_amount2: Option<U512> =
-        contract_api::call_contract(mint.clone(), &("balance", purse2), &vec![purse2]);
+    let new_amount1: Option<U512> = contract_api::call_contract(mint.clone(), &("balance", purse1));
+    let new_amount2: Option<U512> = contract_api::call_contract(mint.clone(), &("balance", purse2));
 
     assert!(new_amount1.unwrap() == U512::from(30));
     assert!(new_amount2.unwrap() == U512::from(370));

@@ -21,7 +21,7 @@ pub extern "C" fn call() {
     let method = "sub";
     let name = "CasperLabs";
     let args = (method, name);
-    match call_contract(pointer.clone(), &args, &Vec::new()) {
+    match call_contract(pointer.clone(), &args) {
         Some(sub_key) => {
             let key_name = "mail_feed";
             add_uref(key_name, &sub_key);
@@ -34,7 +34,7 @@ pub extern "C" fn call() {
             let method = "pub";
             let message = "Hello, World!";
             let args = (method, message);
-            let _result: () = call_contract(pointer, &args, &Vec::new());
+            let _result: () = call_contract(pointer, &args);
 
             let list_key: UPointer<Vec<String>> = sub_key.to_u_ptr().unwrap();
             let messages = read(list_key);

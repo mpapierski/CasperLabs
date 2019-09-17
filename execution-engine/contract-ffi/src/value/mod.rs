@@ -265,6 +265,14 @@ impl Value {
             UInt64(_) => String::from("Value::UInt64"),
         }
     }
+
+    /// Returns an optional if the value holds a Key variant
+    pub fn as_key(&self) -> Option<&Key> {
+        match self {
+            Value::Key(key) => Some(key),
+            _ => None,
+        }
+    }
 }
 
 macro_rules! from_try_from_impl {

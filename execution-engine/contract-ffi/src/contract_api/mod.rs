@@ -305,20 +305,11 @@ pub fn ret<T: ToBytes>(t: &T, extra_urefs: &Vec<URef>) -> ! {
 /// execution. The value returned from the contract call (see `ret` above) is
 /// returned from this function.
 #[allow(clippy::ptr_arg)]
-pub fn call_contract<A: ArgsParser, T: FromBytes>(
-    c_ptr: ContractPointer,
-    args: &A,
-    extra_urefs: &Vec<Key>,
-) -> T {
+pub fn call_contract<A: ArgsParser, T: FromBytes>(c_ptr: ContractPointer, args: &A) -> T {
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = to_ptr(&contract_key);
     let (args_ptr, args_size, _bytes2) = ArgsParser::parse(args).map(|args| to_ptr(&args)).unwrap();
-    let (urefs_ptr, urefs_size, _bytes3) = to_ptr(extra_urefs);
-    let res_size = unsafe {
-        ext_ffi::call_contract(
-            key_ptr, key_size, args_ptr, args_size, urefs_ptr, urefs_size,
-        )
-    };
+    let res_size = unsafe { ext_ffi::call_contract(key_ptr, key_size, args_ptr, args_size) };
     let res_ptr = alloc_bytes(res_size);
     let res_bytes = unsafe {
         ext_ffi::get_call_result(res_ptr);

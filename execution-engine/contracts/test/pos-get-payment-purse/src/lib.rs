@@ -3,8 +3,6 @@
 extern crate alloc;
 extern crate contract_ffi;
 
-use alloc::vec::Vec;
-
 use contract_ffi::contract_api::pointers::{ContractPointer, UPointer};
 use contract_ffi::contract_api::{self, PurseTransferResult};
 use contract_ffi::key::Key;
@@ -38,8 +36,7 @@ pub extern "C" fn call() {
     let payment_amount: U512 = 100.into();
     // amount passed to payment contract
     let payment_fund: U512 = contract_api::get_arg(0);
-    let payment_purse: PurseId =
-        contract_api::call_contract(pos_pointer, &("get_payment_purse",), &Vec::new());
+    let payment_purse: PurseId = contract_api::call_contract(pos_pointer, &("get_payment_purse",));
 
     // can deposit
     if let PurseTransferResult::TransferError =

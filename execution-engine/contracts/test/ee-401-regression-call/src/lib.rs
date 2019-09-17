@@ -25,9 +25,7 @@ pub extern "C" fn call() {
         _ => contract_api::revert(Error::InvalidURef as u32),
     };
 
-    let extra_urefs = [].to_vec();
-
-    let result: URef = contract_api::call_contract(contract_pointer, &(), &extra_urefs);
+    let result: URef = contract_api::call_contract(contract_pointer, &());
 
     let value: String = contract_api::read(UPointer::from_uref(result).unwrap());
 

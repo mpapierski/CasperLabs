@@ -128,9 +128,6 @@ fn sub_call<R: StateReader<Key, Value>>(
     refs: &mut BTreeMap<String, Key>,
     key: Key,
     current_runtime: &mut Runtime<R>,
-    // Unforgable references passed across the call boundary from caller to callee
-    //(necessary if the contract takes a uref argument).
-    extra_urefs: Vec<Key>,
     protocol_version: u64,
 ) -> Result<Vec<u8>, Error>
 where
@@ -138,7 +135,17 @@ where
 {
     let (instance, memory) = instance_and_memory(parity_module.clone(), protocol_version)?;
 
-    let known_urefs = extract_access_rights_from_keys(refs.values().cloned().chain(extra_urefs));
+    // Infer
+    let inferred_urefs: Vec<Key> = args
+        .iter()
+        .filter_map(|value| match value.get().as_key() {
+            key @ Some(Key::URef(_)) => key,
+            _ => None,
+        })
+        .cloned()
+        .collect();
+    let known_urefs =
+        extract_access_rights_from_keys(refs.values().cloned().chain(inferred_urefs.into_iter()));
 
     let mut runtime = Runtime {
         memory,
@@ -428,12 +435,7 @@ where
 
     /// Calls contract living under a `key`, with supplied `args` and extra
     /// `urefs`.
-    pub fn call_contract(
-        &mut self,
-        key: Key,
-        args_bytes: Vec<u8>,
-        urefs_bytes: Vec<u8>,
-    ) -> Result<usize, Error> {
+    pub fn call_contract(&mut self, key: Key, args_bytes: Vec<u8>) -> Result<usize, Error> {
         let (args, module, mut refs, protocol_version) = {
             match self.context.read_gs(&key)? {
                 None => Err(Error::KeyNotFound(key)),
@@ -469,14 +471,12 @@ where
             .map(|value| Validated::new(value, Validated::valid).unwrap())
             .collect();
 
-        let extra_urefs = self.context.deserialize_keys(&urefs_bytes)?;
         let result = sub_call(
             module,
             validated_args,
             &mut refs,
             key,
             self,
-            extra_urefs,
             protocol_version,
         )?;
         self.host_buf = result;
@@ -735,9 +735,7 @@ where
             ArgsParser::parse(&args).and_then(|args| args.to_bytes())?
         };
 
-        let urefs_bytes = Vec::<Key>::new().to_bytes()?;
-
-        self.call_contract(mint_contract_key, args_bytes, urefs_bytes)?;
+        self.call_contract(mint_contract_key, args_bytes)?;
 
         let result: URef = deserialize(&self.host_buf)?;
 
@@ -766,9 +764,7 @@ where
             ArgsParser::parse(&args).and_then(|args| args.to_bytes())?
         };
 
-        let urefs_bytes = vec![Key::URef(source_value), Key::URef(target_value)].to_bytes()?;
-
-        self.call_contract(mint_contract_key, args_bytes, urefs_bytes)?;
+        self.call_contract(mint_contract_key, args_bytes)?;
 
         // This will deserialize `host_buf` into the Result type which carries
         // mint contract error.

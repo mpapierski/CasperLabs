@@ -18,5 +18,5 @@ pub extern "C" fn call() {
     };
 
     // Call `define` part of the contract.
-    call_contract(pointer, &(), &Vec::new())
+    call_contract(pointer, &())
 }

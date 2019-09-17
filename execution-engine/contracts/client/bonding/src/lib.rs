@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -31,7 +30,6 @@ pub extern "C" fn call() {
         PurseTransferResult::TransferSuccessful => contract_api::call_contract(
             pos_pointer,
             &(BOND_METHOD_NAME, bond_amount, bonding_purse),
-            &vec![Key::URef(bonding_purse.value())],
         ),
 
         PurseTransferResult::TransferError => contract_api::revert(1324),

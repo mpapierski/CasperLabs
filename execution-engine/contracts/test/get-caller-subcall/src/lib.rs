@@ -25,7 +25,7 @@ pub extern "C" fn call() {
     );
 
     let pointer = contract_api::store_function("check_caller_ext", BTreeMap::new());
-    let subcall_public_key: PublicKey = contract_api::call_contract(pointer, &(), &Vec::new());
+    let subcall_public_key: PublicKey = contract_api::call_contract(pointer, &());
     assert_eq!(
         subcall_public_key, known_public_key,
         "subcall public key was not known public key"

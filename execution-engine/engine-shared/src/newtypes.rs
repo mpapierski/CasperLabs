@@ -120,6 +120,10 @@ impl<T> Validated<T> {
     pub fn into_raw(self) -> T {
         self.0
     }
+
+    pub fn get(&self) -> &T {
+        &self.0
+    }
 }
 
 impl<T: Clone> Clone for Validated<T> {
