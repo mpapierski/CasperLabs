@@ -21,7 +21,7 @@ use contract_ffi::key::{Key, HASH_SIZE};
 use contract_ffi::uref::URef;
 use contract_ffi::uref::{AccessRights, UREF_ADDR_SIZE};
 use contract_ffi::value::account::{BlockTime, PublicKey, PurseId};
-use contract_ffi::value::{Account, Value, U512};
+use contract_ffi::value::{Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::motes::Motes;
 use engine_shared::newtypes::{Blake2bHash, CorrelationId, Validated};
@@ -88,7 +88,7 @@ where
         mint_code_bytes: &[u8],
         proof_of_stake_code_bytes: &[u8],
         genesis_validators: Vec<(PublicKey, U512)>,
-        protocol_version: u64,
+        protocol_version: ProtocolVersion,
     ) -> Result<GenesisResult, Error> {
         let mint_code = WasmiBytes::new(mint_code_bytes, WasmCosts::free())?;
         let pos_code = WasmiBytes::new(proof_of_stake_code_bytes, WasmCosts::free())?;
@@ -443,7 +443,7 @@ where
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
         prestate_hash: Blake2bHash,
-        protocol_version: u64,
+        protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
         executor: &E,
         preprocessor: &P,
@@ -475,7 +475,7 @@ where
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
         prestate_hash: Blake2bHash,
-        protocol_version: u64,
+        protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
         executor: &E,
         preprocessor: &P,
@@ -616,7 +616,7 @@ where
         blocktime: BlockTime,
         deploy_hash: [u8; 32],
         prestate_hash: Blake2bHash,
-        protocol_version: u64,
+        protocol_version: ProtocolVersion,
         correlation_id: CorrelationId,
         executor: &E,
         preprocessor: &P,

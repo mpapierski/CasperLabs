@@ -16,7 +16,7 @@ use contract_ffi::key::Key;
 use contract_ffi::system_contracts::{self, mint};
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLIC_KEY_SIZE};
-use contract_ffi::value::{Account, Value, U512};
+use contract_ffi::value::{Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::Validated;
 use engine_shared::transform::TypeMismatch;
@@ -55,7 +55,7 @@ pub fn rename_export_to_call(module: &mut Module, name: String) {
 
 pub fn instance_and_memory(
     parity_module: Module,
-    protocol_version: u64,
+    protocol_version: ProtocolVersion,
 ) -> Result<(ModuleRef, MemoryRef), Error> {
     let module = wasmi::Module::from_parity_wasm_module(parity_module)?;
     let resolver = create_module_resolver(protocol_version)?;
@@ -129,7 +129,7 @@ fn sub_call<R: StateReader<Key, Value>>(
     refs: &mut BTreeMap<String, Key>,
     key: Key,
     current_runtime: &mut Runtime<R>,
-    protocol_version: u64,
+    protocol_version: ProtocolVersion,
 ) -> Result<Value, Error>
 where
     R::Error: Into<Error>,
@@ -483,7 +483,8 @@ where
             self,
             protocol_version,
         )?;
-        // TODO(mpapierski): Inside `sub_call` call returned value is deserialized just to be serialized here again. `sub_call`
+        // TODO(mpapierski): Inside `sub_call` call returned value is deserialized just to be
+        // serialized here again. `sub_call`
         self.host_buf = result.to_bytes()?;
         Ok(self.host_buf.len())
     }
