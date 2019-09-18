@@ -66,7 +66,7 @@ pub trait Executor<A> {
         R::Error: Into<Error>;
 
     #[allow(clippy::too_many_arguments)]
-    fn better_exec<R: StateReader<Key, Value>, T>(
+    fn better_exec<R: StateReader<Key, Value>>(
         &self,
         module: A,
         args: &[u8],
@@ -82,10 +82,9 @@ pub trait Executor<A> {
         correlation_id: CorrelationId,
         state: Rc<RefCell<TrackingCopy<R>>>,
         phase: Phase,
-    ) -> Result<T, Error>
+    ) -> Result<Value, Error>
     where
-        R::Error: Into<Error>,
-        T: FromBytes;
+        R::Error: Into<Error>;
 }
 
 pub struct WasmiExecutor;
@@ -343,7 +342,7 @@ impl Executor<Module> for WasmiExecutor {
         }
     }
 
-    fn better_exec<R: StateReader<Key, Value>, T>(
+    fn better_exec<R: StateReader<Key, Value>>(
         &self,
         module: Module,
         args: &[u8],
@@ -359,10 +358,9 @@ impl Executor<Module> for WasmiExecutor {
         correlation_id: CorrelationId,
         state: Rc<RefCell<TrackingCopy<R>>>,
         phase: Phase,
-    ) -> Result<T, Error>
+    ) -> Result<Value, Error>
     where
         R::Error: Into<Error>,
-        T: FromBytes,
     {
         let known_keys = extract_access_rights_from_keys(keys.values().cloned());
 
@@ -410,21 +408,19 @@ impl Executor<Module> for WasmiExecutor {
             Err(error) => error,
             Ok(_) => {
                 // This duplicates the behavior of sub_call, but is admittedly rather questionable.
-                let ret = bytesrepr::deserialize(runtime.result())?;
-                return Ok(ret);
+                return Ok(runtime.result().as_ref().cloned().unwrap_or(Value::Unit));
             }
         };
 
-        let return_value_bytes: &[u8] = match return_error
+        let return_value: Value = match return_error
             .as_host_error()
             .and_then(|host_error| host_error.downcast_ref::<Error>())
         {
-            Some(Error::Ret(_)) => runtime.result(),
+            Some(Error::Ret(_)) => runtime.result().as_ref().cloned().unwrap_or(Value::Unit),
             Some(Error::Revert(code)) => return Err(Error::Revert(*code)),
             _ => return Err(Error::Interpreter(return_error)),
         };
 
-        let ret = bytesrepr::deserialize(return_value_bytes)?;
-        Ok(ret)
+        Ok(return_value)
     }
 }

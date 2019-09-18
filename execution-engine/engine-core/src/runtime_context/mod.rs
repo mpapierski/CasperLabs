@@ -535,12 +535,6 @@ where
         Ok(keys)
     }
 
-    pub fn deserialize_urefs(&self, bytes: &[u8]) -> Result<Vec<URef>, Error> {
-        let keys: Vec<URef> = deserialize(bytes)?;
-        keys.iter().try_for_each(|k| self.validate_uref(k))?;
-        Ok(keys)
-    }
-
     fn validate_readable(&self, key: &Key) -> Result<(), Error> {
         if self.is_readable(&key) {
             Ok(())

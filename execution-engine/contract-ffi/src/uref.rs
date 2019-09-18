@@ -1,4 +1,5 @@
 use bitflags;
+use core::convert::TryFrom;
 
 use crate::alloc::string::String;
 use crate::alloc::vec::Vec;
@@ -227,11 +228,15 @@ impl<T> From<UPointer<T>> for URef {
     }
 }
 
-impl From<Value> for URef {
-    fn from(value: Value) -> URef {
+impl TryFrom<Value> for URef {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<URef, Self::Error> {
         match value {
-            Value::Key(Key::URef(uref)) => uref,
-            _ => panic!("Invalid Value variant"),
+            Value::Key(Key::URef(uref)) => Ok(uref),
+            // Here type string is stored as error variant because it is not always possible to
+            // access `value` that is being TryFrom-ed to obtain this information.
+            value => Err(value.type_string()),
         }
     }
 }

@@ -4,11 +4,11 @@ pub mod pointers;
 
 use self::alloc_util::*;
 use self::pointers::*;
-use crate::bytesrepr::{deserialize, FromBytes, ToBytes};
+use crate::bytesrepr::{deserialize, ToBytes};
 use crate::execution::{Phase, PHASE_SIZE};
 use crate::ext_ffi;
 use crate::key::{Key, UREF_SIZE};
-use crate::uref::{AccessRights, URef};
+use crate::uref::AccessRights;
 use crate::value::account::{
     Account, ActionType, AddKeyFailure, BlockTime, PublicKey, PurseId, RemoveKeyFailure,
     SetThresholdFailure, UpdateKeyFailure, Weight, BLOCKTIME_SER_SIZE, PURSE_ID_SIZE_SERIALIZED,
@@ -292,11 +292,10 @@ pub fn get_blocktime() -> BlockTime {
 /// return a value to their caller. The return value of a directly deployed
 /// contract is never looked at.
 #[allow(clippy::ptr_arg)]
-pub fn ret<T: ToBytes>(t: &T, extra_urefs: &Vec<URef>) -> ! {
-    let (ptr, size, _bytes) = to_ptr(t);
-    let (urefs_ptr, urefs_size, _bytes2) = to_ptr(extra_urefs);
+pub fn ret<T: Into<Value>>(t: T) -> ! {
+    let (ptr, size, _bytes) = to_ptr(&t.into());
     unsafe {
-        ext_ffi::ret(ptr, size, urefs_ptr, urefs_size);
+        ext_ffi::ret(ptr, size);
     }
 }
 
@@ -305,7 +304,10 @@ pub fn ret<T: ToBytes>(t: &T, extra_urefs: &Vec<URef>) -> ! {
 /// execution. The value returned from the contract call (see `ret` above) is
 /// returned from this function.
 #[allow(clippy::ptr_arg)]
-pub fn call_contract<A: ArgsParser, T: FromBytes>(c_ptr: ContractPointer, args: &A) -> T {
+pub fn call_contract<A: ArgsParser, T: TryFrom<Value>>(c_ptr: ContractPointer, args: &A) -> T
+where
+    <T as TryFrom<Value>>::Error: Debug,
+{
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = to_ptr(&contract_key);
     let (args_ptr, args_size, _bytes2) = ArgsParser::parse(args).map(|args| to_ptr(&args)).unwrap();
@@ -315,7 +317,10 @@ pub fn call_contract<A: ArgsParser, T: FromBytes>(c_ptr: ContractPointer, args: 
         ext_ffi::get_call_result(res_ptr);
         Vec::from_raw_parts(res_ptr, res_size, res_size)
     };
-    deserialize(&res_bytes).unwrap()
+    // Deserialize returned Value
+    let value: Value = deserialize(&res_bytes).unwrap();
+    // Convert Value into desired type
+    value.try_into().unwrap()
 }
 
 /// Stops execution of a contract and reverts execution effects

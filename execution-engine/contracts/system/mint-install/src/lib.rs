@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 extern crate mint_token;
@@ -19,5 +18,5 @@ pub extern "C" fn call() {
     let contract = contract_api::fn_by_name("mint_ext", BTreeMap::new());
     let uref: URef = contract_api::new_uref(contract).into();
 
-    contract_api::ret(&uref, &vec![uref]);
+    contract_api::ret(uref);
 }

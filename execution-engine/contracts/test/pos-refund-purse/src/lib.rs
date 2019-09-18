@@ -8,7 +8,7 @@ use contract_ffi::contract_api::{self, PurseTransferResult};
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::PurseId;
-use contract_ffi::value::U512;
+use contract_ffi::value::{Value, U512};
 
 enum Error {
     GetPosOuterURef = 1,
@@ -24,7 +24,10 @@ fn set_refund_purse(pos: &ContractPointer, p: &PurseId) {
 }
 
 fn get_refund_purse(pos: &ContractPointer) -> Option<PurseId> {
-    contract_api::call_contract(pos.clone(), &("get_refund_purse",))
+    // TODO(mpapierski): Identify additional Value variants
+    contract_api::call_contract::<_, Value>(pos.clone(), &("get_refund_purse",))
+        .try_deserialize()
+        .unwrap()
 }
 
 fn get_payment_purse(pos: &ContractPointer) -> PurseId {

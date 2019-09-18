@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(cell_update)]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -18,7 +17,7 @@ use contract_ffi::value::U512;
 #[no_mangle]
 pub extern "C" fn do_nothing() {
     // Doesn't advance RNG of the runtime
-    contract_api::ret(&String::from("Hello, world!"), &vec![])
+    contract_api::ret(String::from("Hello, world!"))
 }
 
 #[no_mangle]
@@ -26,8 +25,8 @@ pub extern "C" fn do_something() {
     // Advances RNG of the runtime
     let test_string = String::from("Hello, world!");
 
-    let test_uref = contract_api::new_uref(test_string).into();
-    contract_api::ret(&test_uref, &vec![test_uref])
+    let test_uref: URef = contract_api::new_uref(test_string).into();
+    contract_api::ret(test_uref)
 }
 
 #[no_mangle]

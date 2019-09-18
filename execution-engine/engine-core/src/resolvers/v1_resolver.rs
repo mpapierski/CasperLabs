@@ -90,7 +90,7 @@ impl ModuleImportResolver for RuntimeModuleImportResolver {
                 FunctionIndex::GetArgFuncIndex.into(),
             ),
             "ret" => FuncInstance::alloc_host(
-                Signature::new(&[ValueType::I32; 4][..], None),
+                Signature::new(&[ValueType::I32; 2][..], None),
                 FunctionIndex::RetFuncIndex.into(),
             ),
             "call_contract" => FuncInstance::alloc_host(

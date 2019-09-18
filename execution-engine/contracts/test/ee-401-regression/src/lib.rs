@@ -10,13 +10,13 @@ use alloc::string::String;
 
 use contract_ffi::contract_api;
 use contract_ffi::contract_api::pointers::ContractPointer;
+use contract_ffi::uref::URef;
 
 #[no_mangle]
 pub extern "C" fn hello_ext() {
     let test_string = String::from("Hello, world!");
-    let test_uref = contract_api::new_uref(test_string).into();
-    let extra_urefs = [test_uref].to_vec();
-    contract_api::ret(&test_uref, &extra_urefs)
+    let test_uref: URef = contract_api::new_uref(test_string).into();
+    contract_api::ret(test_uref)
 }
 
 #[no_mangle]

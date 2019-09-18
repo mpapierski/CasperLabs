@@ -47,14 +47,8 @@ fn trigger_contract(c_ptr: ContractPointer) {
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = to_ptr(&contract_key);
     let mut args = vec![255, 255, 255, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    let _res_size = unsafe {
-        malicious_ffi::call_contract(
-            key_ptr,
-            key_size,
-            args.as_mut_ptr(),
-            args.len(),
-        )
-    };
+    let _res_size =
+        unsafe { malicious_ffi::call_contract(key_ptr, key_size, args.as_mut_ptr(), args.len()) };
 }
 
 #[no_mangle]

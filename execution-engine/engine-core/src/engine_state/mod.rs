@@ -9,6 +9,7 @@ pub mod utils;
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::convert::TryInto;
 use std::rc::Rc;
 
 use num_traits::Zero;
@@ -17,7 +18,6 @@ use contract_ffi::bytesrepr::ToBytes;
 use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::execution::Phase;
 use contract_ffi::key::{Key, HASH_SIZE};
-use contract_ffi::system_contracts::mint;
 use contract_ffi::uref::URef;
 use contract_ffi::uref::{AccessRights, UREF_ADDR_SIZE};
 use contract_ffi::value::account::{BlockTime, PublicKey, PurseId};
@@ -25,7 +25,7 @@ use contract_ffi::value::{Account, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::motes::Motes;
 use engine_shared::newtypes::{Blake2bHash, CorrelationId, Validated};
-use engine_shared::transform::Transform;
+use engine_shared::transform::{Transform, TypeMismatch};
 use engine_storage::global_state::{CommitResult, StateProvider, StateReader};
 use engine_storage::protocol_data::ProtocolData;
 use engine_wasm_prep::wasm_costs::WasmCosts;
@@ -203,7 +203,7 @@ where
             let address_generator = Rc::clone(&address_generator);
             let tracking_copy = Rc::clone(&tracking_copy);
 
-            executor.better_exec(
+            let result = executor.better_exec(
                 mint_installer_module,
                 &args,
                 &mut key_lookup,
@@ -218,7 +218,13 @@ where
                 correlation_id,
                 tracking_copy,
                 phase,
-            )?
+            )?;
+            result.try_into().map_err(|type_name| {
+                Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
+                    "URef".to_string(),
+                    type_name,
+                )))
+            })?
         };
 
         // Spec #7: Execute pos installer wasm code, passing the initially bonded validators as an
@@ -250,7 +256,7 @@ where
             let address_generator = Rc::clone(&address_generator);
             let tracking_copy = Rc::clone(&tracking_copy);
 
-            executor.better_exec(
+            let result = executor.better_exec(
                 proof_of_stake_installer_module,
                 &args,
                 &mut key_lookup,
@@ -265,7 +271,13 @@ where
                 correlation_id,
                 tracking_copy,
                 phase,
-            )?
+            )?;
+            result.try_into().map_err(|type_name| {
+                Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
+                    "URef".to_string(),
+                    type_name,
+                )))
+            })?
         };
 
         //
@@ -349,7 +361,7 @@ where
                 };
 
                 // ...call the Mint's "mint" endpoint to create purse with tokens...
-                let mint_result: Result<URef, mint::error::Error> = executor.better_exec(
+                let result = executor.better_exec(
                     module,
                     &args,
                     &mut key_lookup,
@@ -365,6 +377,13 @@ where
                     tracking_copy_exec,
                     phase,
                 )?;
+
+                let mint_result = result.try_into().map_err(|type_name| {
+                    Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
+                        "URef".to_string(),
+                        type_name,
+                    )))
+                });
 
                 // ...and write that account to global state...
                 let key = {

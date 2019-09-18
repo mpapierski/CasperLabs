@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(cell_update)]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -27,9 +26,7 @@ pub extern "C" fn create() {
         ret.into()
     };
 
-    let extra_urefs = vec![read_only_reference];
-
-    contract_api::ret(&read_only_reference, &extra_urefs)
+    contract_api::ret(read_only_reference);
 }
 
 #[no_mangle]

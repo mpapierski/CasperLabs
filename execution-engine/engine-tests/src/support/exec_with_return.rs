@@ -1,5 +1,5 @@
 use crate::support::test_support::{self, WasmTestBuilder};
-use contract_ffi::bytesrepr::{self, FromBytes};
+use contract_ffi::bytesrepr::FromBytes;
 use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::URef;
@@ -29,7 +29,7 @@ const INIT_PROTOCOL_VERSION: u64 = 1;
 /// output. It is essentially the same functionality as `Executor::exec`, but the return value of
 /// the contract is returned along with the effects. The purpose of this function is to test
 /// installer contracts used in the new genesis process.
-pub fn exec<S, T>(
+pub fn exec<S>(
     builder: &mut WasmTestBuilder<S>,
     address: [u8; 32],
     wasm_file: &str,
@@ -37,12 +37,11 @@ pub fn exec<S, T>(
     deploy_hash: [u8; 32],
     args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     extra_urefs: Vec<URef>,
-) -> Option<(T, Vec<URef>, ExecutionEffect)>
+) -> Option<(Value, Option<URef>, ExecutionEffect)>
 where
     S: StateProvider,
     S::Error: Into<execution::Error>,
     EngineState<S>: ExecutionEngineService,
-    T: FromBytes,
 {
     let prestate = builder
         .get_post_state_hash()
@@ -142,14 +141,11 @@ where
                 // `ret` Trap is a success; downcast and attempt to extract result
                 let downcasted_error = host_error.downcast_ref::<execution::Error>().unwrap();
                 match downcasted_error {
-                    execution::Error::Ret(ref ret_urefs) => {
+                    execution::Error::Ret(urefs) => {
                         let effect = runtime.context().effect();
-                        let urefs = ret_urefs.clone();
-
-                        let value: T = bytesrepr::deserialize(runtime.result())
-                            .expect("should deserialize return value");
-
-                        Some((value, urefs, effect))
+                        let value: Value =
+                            runtime.result().as_ref().cloned().unwrap_or(Value::Unit);
+                        Some((value, *urefs, effect))
                     }
 
                     _ => None,

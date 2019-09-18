@@ -125,17 +125,9 @@ where
             FunctionIndex::RetFuncIndex => {
                 // args(0) = pointer to value
                 // args(1) = size of value
-                // args(2) = pointer to extra returned urefs
-                // args(3) = size of extra urefs
-                let (value_ptr, value_size, extra_urefs_ptr, extra_urefs_size): (_, u32, _, u32) =
-                    Args::parse(args)?;
+                let (value_ptr, value_size): (_, u32) = Args::parse(args)?;
 
-                Err(self.ret(
-                    value_ptr,
-                    value_size as usize,
-                    extra_urefs_ptr,
-                    extra_urefs_size as usize,
-                ))
+                Err(self.ret(value_ptr, value_size as usize))
             }
 
             FunctionIndex::CallContractFuncIndex => {

@@ -5,14 +5,13 @@ extern crate alloc;
 extern crate contract_ffi;
 
 use alloc::collections::btree_map::BTreeMap;
-use alloc::prelude::v1::Vec;
 use contract_ffi::contract_api;
 use contract_ffi::value::account::PublicKey;
 
 #[no_mangle]
 pub extern "C" fn check_caller_ext() {
     let caller_public_key: PublicKey = contract_api::get_caller();
-    contract_api::ret(&caller_public_key, &Vec::new())
+    contract_api::ret(caller_public_key)
 }
 
 #[no_mangle]

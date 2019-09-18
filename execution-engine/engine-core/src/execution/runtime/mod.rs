@@ -2,7 +2,7 @@ mod args;
 mod externals;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::iter::IntoIterator;
 
 use itertools::Itertools;
@@ -19,6 +19,7 @@ use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLI
 use contract_ffi::value::{Account, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::Validated;
+use engine_shared::transform::TypeMismatch;
 use engine_storage::global_state::StateReader;
 
 use super::{Error, MINT_NAME, POS_NAME};
@@ -31,7 +32,7 @@ use crate::Address;
 pub struct Runtime<'a, R> {
     memory: MemoryRef,
     module: Module,
-    result: Vec<u8>,
+    result: Option<Value>,
     host_buf: Vec<u8>,
     context: RuntimeContext<'a, R>,
 }
@@ -129,13 +130,13 @@ fn sub_call<R: StateReader<Key, Value>>(
     key: Key,
     current_runtime: &mut Runtime<R>,
     protocol_version: u64,
-) -> Result<Vec<u8>, Error>
+) -> Result<Value, Error>
 where
     R::Error: Into<Error>,
 {
     let (instance, memory) = instance_and_memory(parity_module.clone(), protocol_version)?;
 
-    // Infer
+    // Infer passed urefs from the arguments and validate
     let inferred_urefs: Vec<Key> = args
         .iter()
         .filter_map(|value| match value.get().as_key() {
@@ -144,13 +145,14 @@ where
         })
         .cloned()
         .collect();
+
     let known_urefs =
         extract_access_rights_from_keys(refs.values().cloned().chain(inferred_urefs.into_iter()));
 
     let mut runtime = Runtime {
         memory,
         module: parity_module,
-        result: Vec::new(),
+        result: None,
         host_buf: Vec::new(),
         context: RuntimeContext::new(
             current_runtime.context.state(),
@@ -175,7 +177,7 @@ where
     let result = instance.invoke_export("call", &[], &mut runtime);
 
     match result {
-        Ok(_) => Ok(runtime.result),
+        Ok(_) => Ok(runtime.result.unwrap_or(Value::Unit)),
         Err(e) => {
             if let Some(host_error) = e.as_host_error() {
                 // If the "error" was in fact a trap caused by calling `ret` then
@@ -183,12 +185,12 @@ where
                 // in the Runtime result field.
                 let downcasted_error = host_error.downcast_ref::<Error>().unwrap();
                 match downcasted_error {
-                    Error::Ret(ref ret_urefs) => {
+                    Error::Ret(ret_urefs) => {
                         //insert extra urefs returned from call
-                        let ret_urefs_map: HashMap<Address, HashSet<AccessRights>> =
-                            extract_access_rights_from_urefs(ret_urefs.clone());
+                        let ret_urefs_map =
+                            extract_access_rights_from_urefs(ret_urefs.iter().cloned());
                         current_runtime.context.add_urefs(ret_urefs_map);
-                        return Ok(runtime.result);
+                        return Ok(runtime.result.unwrap_or(Value::Unit));
                     }
                     Error::Revert(status) => {
                         // Propagate revert as revert, instead of passing it as
@@ -212,14 +214,14 @@ where
         Runtime {
             memory,
             module,
-            result: Vec::new(),
+            result: None,
             host_buf: Vec::new(),
             context,
         }
     }
 
-    pub fn result(&self) -> &[u8] {
-        self.result.as_slice()
+    pub fn result(&self) -> &Option<Value> {
+        &self.result
     }
 
     pub fn context(&self) -> &RuntimeContext<'a, R> {
@@ -405,29 +407,30 @@ where
     /// Return a some bytes from the memory and terminate the current
     /// `sub_call`. Note that the return type is `Trap`, indicating that
     /// this function will always kill the current Wasm instance.
-    pub fn ret(
-        &mut self,
-        value_ptr: u32,
-        value_size: usize,
-        extra_urefs_ptr: u32,
-        extra_urefs_size: usize,
-    ) -> Trap {
-        let mem_get = self
+    pub fn ret(&mut self, value_ptr: u32, value_size: usize) -> Trap {
+        let mem_get: Result<Value, _> = self
             .memory
             .get(value_ptr, value_size)
             .map_err(Error::Interpreter)
-            .and_then(|x| {
-                let urefs_bytes = self.bytes_from_mem(extra_urefs_ptr, extra_urefs_size)?;
-                let urefs = self.context.deserialize_urefs(&urefs_bytes)?;
-                Ok((x, urefs))
-            });
+            .and_then(|value_bytes| deserialize(&value_bytes).map_err(Error::BytesRepr));
         match mem_get {
-            Ok((buf, urefs)) => {
+            Ok(value) => {
                 // Set the result field in the runtime and return
                 // the proper element of the `Error` enum indicating
                 // that the reason for exiting the module was a call to ret.
-                self.result = buf;
-                Error::Ret(urefs).into()
+                self.result = Some(value.clone());
+
+                // Try to infer an URef out of a returned Value
+                let maybe_uref = value.as_key().and_then(Key::as_uref);
+                if let Some(ref uref) = maybe_uref {
+                    if let Err(err) = self.context.validate_uref(uref) {
+                        // Returns error if the given value that holds URef variant can't be
+                        // validated
+                        return err.into();
+                    }
+                }
+
+                Error::Ret(maybe_uref.cloned()).into()
             }
             Err(e) => e.into(),
         }
@@ -466,10 +469,11 @@ where
             }
         }?;
 
+        // Validate each passed value
         let validated_args = args
             .into_iter()
-            .map(|value| Validated::new(value, Validated::valid).unwrap())
-            .collect();
+            .map(|value| Validated::new(value, |val| self.context.validate_keys(val)))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let result = sub_call(
             module,
@@ -479,7 +483,8 @@ where
             self,
             protocol_version,
         )?;
-        self.host_buf = result;
+        // TODO(mpapierski): Inside `sub_call` call returned value is deserialized just to be serialized here again. `sub_call`
+        self.host_buf = result.to_bytes()?;
         Ok(self.host_buf.len())
     }
 
@@ -737,7 +742,12 @@ where
 
         self.call_contract(mint_contract_key, args_bytes)?;
 
-        let result: URef = deserialize(&self.host_buf)?;
+        let result: URef =
+            deserialize::<Value>(&self.host_buf)?
+                .try_into()
+                .map_err(|type_name| {
+                    Error::TypeMismatch(TypeMismatch::new("URef".to_string(), type_name))
+                })?;
 
         Ok(PurseId::new(result))
     }
@@ -768,7 +778,8 @@ where
 
         // This will deserialize `host_buf` into the Result type which carries
         // mint contract error.
-        let result: Result<(), mint::error::Error> = deserialize(&self.host_buf)?;
+        let result: Value = deserialize(&self.host_buf)?;
+        let result: Result<(), mint::error::Error> = result.try_deserialize()?;
         // Wraps mint error into a more general error type through an aggregate
         // system contracts Error.
         Ok(result.map_err(system_contracts::error::Error::from)?)
