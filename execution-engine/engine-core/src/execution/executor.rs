@@ -170,18 +170,24 @@ impl Executor<Module> for WasmiExecutor {
                 effects_snapshot
             )
         };
-        let arg_values = arguments
+
+        // Decode each Value from each bytes
+        let maybe_arg_values: Result<Vec<Value>, _> = arguments
             .into_iter()
-            .map(|value_bytes| {
-                let (value, _) = FromBytes::from_bytes(&value_bytes).unwrap();
-                value
-            })
-            .collect::<Vec<Value>>();
+            .map(|value_bytes| FromBytes::from_bytes(&value_bytes).map(|(value, _rest)| value))
+            .collect();
+
+        let arg_values = on_fail_charge!(
+            maybe_arg_values,
+            Gas::from_u64(args.len() as u64),
+            effects_snapshot
+        );
 
         let validated_args = arg_values
             .into_iter()
-            .map(|value| Validated::new(value, Validated::valid).unwrap())
-            .collect();
+            .map(|value| Validated::new(value, Validated::valid))
+            .collect::<Result<Vec<_>, _>>()
+            .expect("should always validate");
 
         let context = RuntimeContext::new(
             tc,
@@ -203,6 +209,7 @@ impl Executor<Module> for WasmiExecutor {
         );
 
         let mut runtime = Runtime::new(memory, parity_module, context);
+
         on_fail_charge!(
             instance.invoke_export("call", &[], &mut runtime),
             runtime.context().gas_counter(),
@@ -258,13 +265,13 @@ impl Executor<Module> for WasmiExecutor {
             )
         };
 
-        let arg_values: Result<Vec<Value>, _> = args_bytes
+        let maybe_arg_values: Result<Vec<Value>, _> = args_bytes
             .into_iter()
             .map(|arg_bytes| Value::from_bytes(&arg_bytes).map(|(value, _rest)| value))
             .collect();
 
         let arg_values = on_fail_charge!(
-            arg_values,
+            maybe_arg_values,
             Gas::from_u64(args.len() as u64),
             effects_snapshot
         );
