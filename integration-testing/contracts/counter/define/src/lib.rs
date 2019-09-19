@@ -4,13 +4,13 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 extern crate contract_ffi;
 
 use contract_ffi::contract_api::pointers::TURef;
 use contract_ffi::contract_api::*;
 use contract_ffi::key::Key;
+use contract_ffi::value::U512;
 
 #[no_mangle]
 pub extern "C" fn counter_ext() {
@@ -19,8 +19,8 @@ pub extern "C" fn counter_ext() {
     match method_name.as_str() {
         "inc" => add(turef, 1),
         "get" => {
-            let result = read(turef);
-            ret(&result, &Vec::new());
+            let result: i32 = read(turef);
+            ret(U512::from(result));
         }
         _ => panic!("Unknown method name!"),
     }

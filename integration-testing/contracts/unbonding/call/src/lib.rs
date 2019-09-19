@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api;
@@ -9,7 +7,7 @@ use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
 use contract_ffi::contract_api::{call_contract, get_uref, read, revert};
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
-use contract_ffi::value::uint::U512;
+use contract_ffi::value::{Value, U512};
 
 enum Error {
     GetPosOuterURef = 1000,
@@ -32,9 +30,7 @@ pub extern "C" fn call() {
     let pos_contract: ContractPointer = get_pos_contract();
     // I dont have any safe method to check for the existence of the args.
     // I am utilizing 0(invalid) amount to indicate no args to EE.
-    let unbond_amount: Option<U512> = match contract_api::get_arg::<u32>(0) {
-        0 => None,
-        amount => Some(amount.into()),
-    };
-    let _result: () = call_contract(pos_contract, &("unbond", unbond_amount));
+    let value = contract_api::get_arg::<U512>(0);
+    let unbond_amount: Option<U512> = if value == U512::zero() { None } else { Some(value) };
+    let _result: () = call_contract(pos_contract, &("unbond", Value::from_serializable(unbond_amount).unwrap()));
 }

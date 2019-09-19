@@ -4,7 +4,6 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 extern crate contract_ffi;
 
@@ -20,7 +19,7 @@ fn hello_name(name: &str) -> String {
 pub extern "C" fn hello_name_ext() {
     let name: String = get_arg(0);
     let y = hello_name(&name);
-    ret(&y, &Vec::new());
+    ret(y);
 }
 
 #[no_mangle]

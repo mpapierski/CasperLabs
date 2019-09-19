@@ -26,19 +26,19 @@ pub extern "C" fn call() {
     match call_contract(pointer.clone(), &args) {
         Some(sub_key) => {
             let key_name = "mail_feed";
-            add_uref(key_name, &sub_key);
+            add_uref(key_name, &sub_key.as_key().unwrap());
 
             let key_name_uref = get_uref(key_name).unwrap_or_else(|| revert(101));
-            if sub_key != key_name_uref {
+            if sub_key.as_key().unwrap() != &key_name_uref {
                 revert(1);
             }
 
             let method = "pub";
             let message = "Hello, World!";
             let args = (method, message);
-            let _result: () = call_contract(pointer, &args);
+            let _foo: () = call_contract(pointer, &args);
 
-            let turef: TURef<Vec<String>> = sub_key.to_turef().unwrap();
+            let turef: TURef<Vec<String>> = sub_key.as_key().unwrap().to_turef().unwrap();
             let messages = read(turef);
 
             if messages.is_empty() {

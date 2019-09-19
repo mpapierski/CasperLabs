@@ -1,9 +1,7 @@
 #![no_std]
 
-extern crate alloc;
 extern crate contract_ffi;
 
-use alloc::vec::Vec;
 use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::contract_api::{call_contract, get_uref, revert};
 use contract_ffi::key::Key;

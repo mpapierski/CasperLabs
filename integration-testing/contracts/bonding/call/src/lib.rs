@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
@@ -34,7 +32,7 @@ pub extern "C" fn call() {
     let pos_contract = get_pos_contract();
     let source_purse = main_purse();
     let bonding_purse = create_purse();
-    let bond_amount: U512 = U512::from(get_arg::<u32>(0));
+    let bond_amount: U512 = get_arg(0);
 
     match transfer_from_purse_to_purse(source_purse, bonding_purse, bond_amount) {
         PurseTransferResult::TransferSuccessful => {

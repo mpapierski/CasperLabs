@@ -5,9 +5,10 @@ extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api::{get_arg, revert};
+use contract_ffi::value::U512;
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let number: u32 = get_arg(0);
-    revert(number);
+    let number: U512 = get_arg::<U512>(0);
+    revert(number.as_u32());
 }

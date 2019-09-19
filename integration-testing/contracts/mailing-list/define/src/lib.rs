@@ -14,6 +14,11 @@ use contract_ffi::contract_api::*;
 use contract_ffi::key::Key;
 use contract_ffi::uref::URef;
 
+
+enum Error {
+    MissingTURef = 1,
+}
+
 fn get_list_key(name: &str) -> TURef<Vec<String>> {
     get_uref(name).unwrap().to_turef().unwrap()
 }
@@ -56,10 +61,9 @@ pub extern "C" fn mailing_list_ext() {
         "sub" => match sub(get_arg(1)) {
             Some(turef) => {
                 let extra_uref = URef::new(turef.addr(), turef.access_rights());
-                let extra_urefs = vec![extra_uref];
-                ret(&Some(Key::from(turef)), &extra_urefs);
+                ret(extra_uref);
             }
-            _ => ret(&Option::<Key>::None, &Vec::new()),
+            _ => revert(Error::MissingTURef as u32),
         },
         //Note that this is totally insecure. In reality
         //the pub method would be only available under an

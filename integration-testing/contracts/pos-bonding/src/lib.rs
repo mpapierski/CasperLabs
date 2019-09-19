@@ -1,11 +1,9 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
 use alloc::string::String;
-use alloc::vec::Vec;
 
 use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
 use contract_ffi::contract_api::{
@@ -16,7 +14,7 @@ use contract_ffi::contract_api::{
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{PublicKey, PurseId};
-use contract_ffi::value::U512;
+use contract_ffi::value::{U512, Value};
 
 enum Error {
     GetPosOuterURef = 1000,
@@ -24,10 +22,6 @@ enum Error {
     PurseToPurseTransfer = 1002,
     UnableToSeedAccount = 1003,
     UnknownCommand = 1004,
-}
-
-fn purse_to_key(p: PurseId) -> Key {
-    Key::URef(p.value())
 }
 
 fn get_pos_contract() -> ContractPointer {
@@ -45,12 +39,11 @@ fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
     call_contract::<_, ()>(
         pos.clone(),
         &(POS_BOND, *amount, source),
-        &vec![purse_to_key(source)],
     );
 }
 
 fn unbond(pos: &ContractPointer, amount: Option<U512>) {
-    call_contract::<_, ()>(pos.clone(), &(POS_UNBOND, amount), &Vec::<Key>::new());
+    call_contract::<_, ()>(pos.clone(), &(POS_UNBOND, Value::from_serializable(amount).unwrap()));
 }
 
 const POS_BOND: &str = "bond";
@@ -92,7 +85,7 @@ pub extern "C" fn call() {
             revert(Error::UnableToSeedAccount as u32);
         }
     } else if command == TEST_UNBOND {
-        let maybe_amount: Option<U512> = get_arg(1);
+        let maybe_amount: Option<U512> = get_arg::<Value>(1).try_deserialize().unwrap();
         unbond(&pos_pointer, maybe_amount);
     } else {
         revert(Error::UnknownCommand as u32);
