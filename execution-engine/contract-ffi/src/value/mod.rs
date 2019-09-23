@@ -429,14 +429,14 @@ impl ToBytes for Vec<Value> {
 
 impl From<PurseId> for Value {
     fn from(value: PurseId) -> Value {
-        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        // TODO(mpapierski): This might return Value::URef (or either Value::PurseId) in second pass
         Value::Key(Key::URef(value.value()))
     }
 }
 
 impl From<PublicKey> for Value {
     fn from(value: PublicKey) -> Value {
-        // TODO: This might return Value::PublicKey in second pass
+        // TODO(mpapierski): This might return Value::PublicKey in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -444,7 +444,7 @@ impl From<PublicKey> for Value {
 
 impl From<[u8; 32]> for Value {
     fn from(value: [u8; 32]) -> Value {
-        // TODO: This might return (or Array32?) in second pass
+        // TODO(mpapierski): This might return something like Array32 in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -452,7 +452,7 @@ impl From<[u8; 32]> for Value {
 
 impl From<BTreeMap<PublicKey, U512>> for Value {
     fn from(value: BTreeMap<PublicKey, U512>) -> Value {
-        // TODO: This might return Value::Map in second pass
+        // TODO(mpapierski): This might return Value::Map in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -460,7 +460,7 @@ impl From<BTreeMap<PublicKey, U512>> for Value {
 
 impl From<Weight> for Value {
     fn from(value: Weight) -> Value {
-        // TODO(mpapiersk): Value::U8 perhaps
+        // TODO(mpapierski): Value::U8 perhaps
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -468,7 +468,7 @@ impl From<Weight> for Value {
 
 impl From<Phase> for Value {
     fn from(value: Phase) -> Value {
-        // TODO(mpapiersk): Value::U8 perhaps
+        // TODO(mpapierski): Value::U8 perhaps
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
