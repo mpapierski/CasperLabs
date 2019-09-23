@@ -31,7 +31,10 @@ fn should_run_mint_install_contract() {
     let ret_value: URef = ret_value.try_into().expect("should contain URef");
 
     // should return a uref
-    assert_eq!(ret_value, ret_urefs.expect("should contain uref"));
+    assert_eq!(
+        ret_value,
+        ret_urefs.get(0).cloned().expect("should contain uref")
+    );
 
     // should have written a contract under that uref
     match effect

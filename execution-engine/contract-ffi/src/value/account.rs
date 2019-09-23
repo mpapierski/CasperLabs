@@ -23,11 +23,15 @@ pub struct TryFromSliceForPublicKeyError(());
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PurseId(URef);
 
-impl From<Value> for PurseId {
-    fn from(value: Value) -> PurseId {
+impl TryFrom<Value> for PurseId {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<PurseId, Self::Error> {
         match value {
-            Value::Key(Key::URef(uref)) => PurseId::new(uref),
-            _ => panic!("Expected Key variant of the Value"),
+            Value::Key(Key::URef(uref)) => Ok(PurseId::new(uref)),
+            _ => Err(Error::custom(format!(
+                "Expected Key with URef variant but got {} value instead",
+                value.type_string()
+            ))),
         }
     }
 }
@@ -295,11 +299,10 @@ pub const WEIGHT_SIZE: usize = U8_SIZE;
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PublicKey([u8; KEY_SIZE]);
 
-impl From<Value> for PublicKey {
-    fn from(value: Value) -> PublicKey {
-        value
-            .try_deserialize()
-            .expect("should deserialize public key from value")
+impl TryFrom<Value> for PublicKey {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<PublicKey, Self::Error> {
+        value.try_deserialize()
     }
 }
 

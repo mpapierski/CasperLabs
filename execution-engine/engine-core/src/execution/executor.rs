@@ -4,12 +4,11 @@ use std::rc::Rc;
 
 use parity_wasm::elements::Module;
 
-use contract_ffi::bytesrepr::{self, FromBytes};
 use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{BlockTime, PublicKey};
-use contract_ffi::value::{Account, ProtocolVersion, Value};
+use contract_ffi::value::{deserialize_arguments, Account, ProtocolVersion, Value};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::CorrelationId;
 use engine_shared::newtypes::Validated;
@@ -159,31 +158,15 @@ impl Executor<Module> for WasmiExecutor {
         // only nonce update can be returned.
         let effects_snapshot = tc.borrow().effect();
 
-        let arguments: Vec<Vec<u8>> = if args.is_empty() {
-            Vec::new()
-        } else {
-            // // TODO: figure out how this works with the cost model
-            // // https://casperlabs.atlassian.net/browse/EE-239
-            on_fail_charge!(
-                bytesrepr::deserialize(args),
-                Gas::from_u64(args.len() as u64),
-                effects_snapshot
-            )
-        };
-
-        // Decode each Value from each bytes
-        let maybe_arg_values: Result<Vec<Value>, _> = arguments
-            .into_iter()
-            .map(|value_bytes| FromBytes::from_bytes(&value_bytes).map(|(value, _rest)| value))
-            .collect();
-
-        let arg_values = on_fail_charge!(
-            maybe_arg_values,
+        // TODO: figure out how this works with the cost model
+        // https://casperlabs.atlassian.net/browse/EE-239
+        let arguments = on_fail_charge!(
+            deserialize_arguments(args),
             Gas::from_u64(args.len() as u64),
             effects_snapshot
         );
 
-        let validated_args = arg_values
+        let validated_args = arguments
             .into_iter()
             .map(|value| Validated::new(value, Validated::valid))
             .collect::<Result<Vec<_>, _>>()
@@ -255,28 +238,13 @@ impl Executor<Module> for WasmiExecutor {
         // can be returned.
         let effects_snapshot = state.borrow().effect();
 
-        let args_bytes: Vec<Vec<u8>> = if args.is_empty() {
-            Vec::new()
-        } else {
-            on_fail_charge!(
-                bytesrepr::deserialize(args),
-                Gas::from_u64(args.len() as u64),
-                effects_snapshot
-            )
-        };
-
-        let maybe_arg_values: Result<Vec<Value>, _> = args_bytes
-            .into_iter()
-            .map(|arg_bytes| Value::from_bytes(&arg_bytes).map(|(value, _rest)| value))
-            .collect();
-
-        let arg_values = on_fail_charge!(
-            maybe_arg_values,
+        let args = on_fail_charge!(
+            deserialize_arguments(args),
             Gas::from_u64(args.len() as u64),
             effects_snapshot
         );
 
-        let validated_args = arg_values
+        let validated_args = args
             .into_iter()
             .map(|value| Validated::new(value, Validated::valid).unwrap())
             .collect();
@@ -371,15 +339,7 @@ impl Executor<Module> for WasmiExecutor {
     {
         let known_keys = extract_access_rights_from_keys(keys.values().cloned());
 
-        let args: Vec<Value> = if args.is_empty() {
-            Vec::new()
-        } else {
-            let args_bytes: Vec<Vec<u8>> = bytesrepr::deserialize(args)?;
-            args_bytes
-                .into_iter()
-                .map(|arg_bytes| FromBytes::from_bytes(&arg_bytes).map(|(value, _rest)| value))
-                .collect::<Result<_, _>>()?
-        };
+        let args: Vec<Value> = deserialize_arguments(args)?;
 
         let validated_args = args
             .into_iter()

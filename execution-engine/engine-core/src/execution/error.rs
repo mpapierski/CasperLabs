@@ -31,7 +31,7 @@ pub enum Error {
     FunctionNotFound(String),
     ParityWasm(elements::Error),
     GasLimit,
-    Ret(Option<URef>),
+    Ret(Vec<URef>),
     Rng(rand::Error),
     ResolverError(ResolverError),
     /// Reverts execution with a provided status

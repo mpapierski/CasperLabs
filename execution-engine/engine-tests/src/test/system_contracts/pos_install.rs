@@ -68,7 +68,10 @@ fn should_run_pos_install_contract() {
     builder.commit_effects(prestate, effect.transforms.clone());
 
     // should return a uref
-    assert_eq!(ret_value, ret_urefs.expect("should return uref"));
+    assert_eq!(
+        ret_value,
+        ret_urefs.get(0).cloned().expect("should return uref")
+    );
 
     // should have written a contract under that uref
     let known_urefs = match effect

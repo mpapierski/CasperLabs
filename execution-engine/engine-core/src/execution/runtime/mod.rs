@@ -9,14 +9,14 @@ use itertools::Itertools;
 use parity_wasm::elements::Module;
 use wasmi::{ImportsBuilder, MemoryRef, ModuleInstance, ModuleRef, Trap, TrapKind};
 
-use contract_ffi::bytesrepr::{deserialize, FromBytes, ToBytes, U32_SIZE};
+use contract_ffi::bytesrepr::{deserialize, ToBytes, U32_SIZE};
 use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::contract_api::{PurseTransferResult, TransferResult};
 use contract_ffi::key::Key;
 use contract_ffi::system_contracts::{self, mint};
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLIC_KEY_SIZE};
-use contract_ffi::value::{Account, ProtocolVersion, Value, U512};
+use contract_ffi::value::{deserialize_arguments, Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::Validated;
 use engine_shared::transform::TypeMismatch;
@@ -136,18 +136,16 @@ where
 {
     let (instance, memory) = instance_and_memory(parity_module.clone(), protocol_version)?;
 
-    // Infer passed urefs from the arguments and validate
-    let inferred_urefs: Vec<Key> = args
+    // Extract passed urefs from all of the arguments
+    let extracted_urefs: Vec<Key> = args
         .iter()
-        .filter_map(|value| match value.get().as_key() {
-            key @ Some(Key::URef(_)) => key,
-            _ => None,
-        })
-        .cloned()
+        .map(|validated_value| validated_value.extract_urefs())
+        .flatten()
+        .map(Key::URef)
         .collect();
 
     let known_urefs =
-        extract_access_rights_from_keys(refs.values().cloned().chain(inferred_urefs.into_iter()));
+        extract_access_rights_from_keys(refs.values().cloned().chain(extracted_urefs.into_iter()));
 
     let mut runtime = Runtime {
         memory,
@@ -415,22 +413,20 @@ where
             .and_then(|value_bytes| deserialize(&value_bytes).map_err(Error::BytesRepr));
         match mem_get {
             Ok(value) => {
+                // Extract and validate URefs of a returned Value
+                let extracted_urefs = value.extract_urefs();
+
+                if let Err(err) = self.context.validate_urefs(&extracted_urefs) {
+                    // Returns error if one of the extracted URefs can't be validated
+                    return err.into();
+                }
+
                 // Set the result field in the runtime and return
                 // the proper element of the `Error` enum indicating
                 // that the reason for exiting the module was a call to ret.
-                self.result = Some(value.clone());
+                self.result = Some(value);
 
-                // Try to infer an URef out of a returned Value
-                let maybe_uref = value.as_key().and_then(Key::as_uref);
-                if let Some(ref uref) = maybe_uref {
-                    if let Err(err) = self.context.validate_uref(uref) {
-                        // Returns error if the given value that holds URef variant can't be
-                        // validated
-                        return err.into();
-                    }
-                }
-
-                Error::Ret(maybe_uref.cloned()).into()
+                Error::Ret(extracted_urefs).into()
             }
             Err(e) => e.into(),
         }
@@ -444,13 +440,7 @@ where
                 None => Err(Error::KeyNotFound(key)),
                 Some(value) => {
                     if let Value::Contract(contract) = value {
-                        let args_bytes: Vec<Vec<u8>> = deserialize(&args_bytes)?;
-                        let args: Vec<Value> = args_bytes
-                            .into_iter()
-                            .map(|arg_bytes| {
-                                Value::from_bytes(&arg_bytes).map(|(value, _rest)| value)
-                            })
-                            .collect::<Result<Vec<Value>, _>>()?;
+                        let args: Vec<Value> = deserialize_arguments(&args_bytes)?;
                         let module = parity_wasm::deserialize_buffer(contract.bytes())?;
 
                         Ok((

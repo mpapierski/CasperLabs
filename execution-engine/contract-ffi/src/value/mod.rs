@@ -4,7 +4,8 @@ pub mod protocol_version;
 pub mod uint;
 
 use crate::bytesrepr::{
-    Error, FromBytes, ToBytes, U128_SIZE, U256_SIZE, U32_SIZE, U512_SIZE, U64_SIZE, U8_SIZE,
+    deserialize, Error, FromBytes, ToBytes, U128_SIZE, U256_SIZE, U32_SIZE, U512_SIZE, U64_SIZE,
+    U8_SIZE,
 };
 use crate::execution::Phase;
 use crate::key::{self, Key, UREF_SIZE};
@@ -165,6 +166,7 @@ impl ToBytes for Value {
         }
     }
 }
+
 impl FromBytes for Value {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
         let (id, rest): (u8, &[u8]) = FromBytes::from_bytes(bytes)?;
@@ -275,6 +277,41 @@ impl Value {
             _ => None,
         }
     }
+
+    /// This method consumes given instance of Value and returns a vector of URefs that can be found
+    /// in currently held variant of Value
+    pub fn extract_urefs(&self) -> Vec<URef> {
+        // NOTE: This implementation currently assumes that regardless of the variant only single
+        // URef can be found
+        let mut urefs: Vec<URef> = Vec::new();
+        match *self {
+            Value::NamedKey(_, Key::URef(uref)) | Value::Key(Key::URef(uref)) => urefs.push(uref),
+            _ => {}
+        }
+        urefs
+    }
+}
+
+/// Deserializes argument list from a single slice of bytes.
+///
+/// First it deserializes a slice of bytes into a vector of vectors of bytes which is each expected
+/// to hold a properly serialized Value.
+///
+/// Deserialization pipeline looks as following:
+///
+///     &[u8] -> Vec<Vec<u8>> -> Vec<Value>
+pub fn deserialize_arguments(bytes: &[u8]) -> Result<Vec<Value>, Error> {
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Slice -> Vec<Vec<u8>>
+    let vec_of_value_bytes: Vec<Vec<u8>> = deserialize(bytes)?;
+    // Vec<Vec<u8>> -> Vec<Value>
+    vec_of_value_bytes
+        .into_iter()
+        .map(|value_bytes| deserialize(&value_bytes))
+        .collect()
 }
 
 macro_rules! from_try_from_impl {
@@ -399,7 +436,7 @@ impl From<PurseId> for Value {
 
 impl From<PublicKey> for Value {
     fn from(value: PublicKey) -> Value {
-        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        // TODO: This might return Value::PublicKey in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -407,7 +444,7 @@ impl From<PublicKey> for Value {
 
 impl From<[u8; 32]> for Value {
     fn from(value: [u8; 32]) -> Value {
-        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        // TODO: This might return (or Array32?) in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -415,7 +452,7 @@ impl From<[u8; 32]> for Value {
 
 impl From<BTreeMap<PublicKey, U512>> for Value {
     fn from(value: BTreeMap<PublicKey, U512>) -> Value {
-        // TODO: This might return Value::URef (or either Value::PurseId) in second pass
+        // TODO: This might return Value::Map in second pass
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
     }
@@ -434,5 +471,32 @@ impl From<Phase> for Value {
         // TODO(mpapiersk): Value::U8 perhaps
         let bytes = value.to_bytes().unwrap();
         Value::ByteArray(bytes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::alloc::string::ToString;
+    use crate::uref::AccessRights;
+
+    #[test]
+    fn extract_urefs_from_value_of_unit_variant() {
+        let value = Value::Unit;
+        assert!(value.extract_urefs().is_empty());
+    }
+
+    #[test]
+    fn extract_urefs_from_value_of_key_variant() {
+        let uref = URef::new([42; 32], AccessRights::READ_ADD_WRITE);
+        let value = Value::Key(Key::URef(uref));
+        assert_eq!(value.extract_urefs(), vec![uref,])
+    }
+
+    #[test]
+    fn extract_urefs_from_value_of_namedkey_variant() {
+        let uref = URef::new([42; 32], AccessRights::READ_ADD_WRITE);
+        let value = Value::NamedKey("Foo".to_string(), Key::URef(uref));
+        assert_eq!(value.extract_urefs(), vec![uref,])
     }
 }

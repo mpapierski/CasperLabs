@@ -529,6 +529,11 @@ where
         }
     }
 
+    // Validates each of the given URefs passed as a slice
+    pub fn validate_urefs(&self, urefs: &[URef]) -> Result<(), Error> {
+        urefs.iter().try_for_each(|uref| self.validate_uref(uref))
+    }
+
     pub fn deserialize_keys(&self, bytes: &[u8]) -> Result<Vec<Key>, Error> {
         let keys: Vec<Key> = deserialize(bytes)?;
         keys.iter().try_for_each(|k| self.validate_key(k))?;

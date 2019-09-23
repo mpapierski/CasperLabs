@@ -38,7 +38,7 @@ pub fn exec<S>(
     deploy_hash: [u8; 32],
     args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     extra_urefs: Vec<URef>,
-) -> Option<(Value, Option<URef>, ExecutionEffect)>
+) -> Option<(Value, Vec<URef>, ExecutionEffect)>
 where
     S: StateProvider,
     S::Error: Into<execution::Error>,
@@ -146,7 +146,7 @@ where
                         let effect = runtime.context().effect();
                         let value: Value =
                             runtime.result().as_ref().cloned().unwrap_or(Value::Unit);
-                        Some((value, *urefs, effect))
+                        Some((value, urefs.clone(), effect))
                     }
 
                     _ => None,
