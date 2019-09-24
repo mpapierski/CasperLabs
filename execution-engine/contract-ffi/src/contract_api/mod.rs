@@ -216,9 +216,10 @@ pub fn store_function_at(name: &str, known_urefs: BTreeMap<String, Key>, uref: T
 /// Return the i-th argument passed to the host for the current module
 /// invocation. Note that this is only relevant to contracts stored on-chain
 /// since a contract deployed directly is not invoked with any arguments.
-pub fn get_arg<T: TryFrom<Value>>(i: u32) -> T
+pub fn get_arg<T>(i: u32) -> T
 where
-    <T as TryFrom<Value>>::Error: Debug,
+    T: TryFrom<Value>,
+    T::Error: Debug,
 {
     let arg_size = unsafe { ext_ffi::load_arg(i) };
     let dest_ptr = alloc_bytes(arg_size);
@@ -306,9 +307,11 @@ pub fn ret<T: Into<Value>>(t: T) -> ! {
 /// execution. The value returned from the contract call (see `ret` above) is
 /// returned from this function.
 #[allow(clippy::ptr_arg)]
-pub fn call_contract<A: ArgsParser, T: TryFrom<Value>>(c_ptr: ContractPointer, args: &A) -> T
+pub fn call_contract<A, T>(c_ptr: ContractPointer, args: &A) -> T
 where
-    <T as TryFrom<Value>>::Error: Debug,
+    A: ArgsParser,
+    T: TryFrom<Value>,
+    T::Error: Debug,
 {
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = to_ptr(&contract_key);

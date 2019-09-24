@@ -227,15 +227,30 @@ impl<T> From<TURef<T>> for URef {
     }
 }
 
+#[derive(Debug)]
+pub struct TryFromValueForURefError {
+    type_name: String,
+}
+
+impl TryFromValueForURefError {
+    pub fn new<T: Into<String>>(type_name: T) -> TryFromValueForURefError {
+        TryFromValueForURefError {
+            type_name: type_name.into(),
+        }
+    }
+
+    pub fn type_name(self) -> String {
+        self.type_name
+    }
+}
+
 impl TryFrom<Value> for URef {
-    type Error = String;
+    type Error = TryFromValueForURefError;
 
     fn try_from(value: Value) -> Result<URef, Self::Error> {
         match value {
             Value::Key(Key::URef(uref)) => Ok(uref),
-            // Here type string is stored as error variant because it is not always possible to
-            // access `value` that is being TryFrom-ed to obtain this information.
-            value => Err(value.type_string()),
+            _ => Err(TryFromValueForURefError::new(value.type_string())),
         }
     }
 }

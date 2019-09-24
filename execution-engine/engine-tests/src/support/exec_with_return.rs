@@ -83,12 +83,15 @@ where
         from_account
     };
 
-    let validated_args = arguments
+    let arg_values: Vec<Value> = arguments
         .into_iter()
         .map(|value_bytes| {
-            let (value, _rest) = Value::from_bytes(&value_bytes).unwrap();
-            value
+            contract_ffi::bytesrepr::deserialize(&value_bytes).expect("should deserialize")
         })
+        .collect();
+
+    let validated_args = arg_values
+        .into_iter()
         .map(|value| Validated::new(value, Validated::valid).unwrap())
         .collect();
 

@@ -36,7 +36,7 @@ pub extern "C" fn call() {
             let method = "pub";
             let message = "Hello, World!";
             let args = (method, message);
-            let _foo: () = call_contract(pointer, &args);
+            let _result: () = call_contract(pointer, &args);
 
             let turef: TURef<Vec<String>> = sub_key.as_key().unwrap().to_turef().unwrap();
             let messages = read(turef);

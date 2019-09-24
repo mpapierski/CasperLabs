@@ -284,6 +284,14 @@ pub const MAX_KEYS: usize = 10;
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Weight(u8);
 
+impl TryFrom<Value> for Weight {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let weight_value: u8 = value.try_deserialize()?;
+        Ok(Weight::new(weight_value))
+    }
+}
+
 impl Weight {
     pub fn new(weight: u8) -> Weight {
         Weight(weight)

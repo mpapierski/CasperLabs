@@ -4,6 +4,7 @@ use super::alloc::string::{String, ToString};
 use super::alloc::vec::Vec;
 
 use crate::value::ProtocolVersion;
+use core::convert::Infallible;
 use core::fmt::Display;
 use core::mem::{size_of, MaybeUninit};
 use failure::Fail;
@@ -50,6 +51,12 @@ pub enum Error {
 impl From<TryReserveError> for Error {
     fn from(_: TryReserveError) -> Error {
         Error::OutOfMemoryError
+    }
+}
+
+impl From<Infallible> for Error {
+    fn from(_: Infallible) -> Self {
+        unreachable!()
     }
 }
 

@@ -3,15 +3,25 @@
 
 extern crate alloc;
 extern crate contract_ffi;
+extern crate core;
 
 use alloc::collections::btree_map::BTreeMap;
 use contract_ffi::contract_api;
 use contract_ffi::value::account::PublicKey;
+use contract_ffi::value::Value;
+use core::convert::TryInto;
+
+enum Error {
+    Serialization = 1,
+}
 
 #[no_mangle]
 pub extern "C" fn check_caller_ext() {
     let caller_public_key: PublicKey = contract_api::get_caller();
-    contract_api::ret(caller_public_key)
+    let ret_value: Value = caller_public_key
+        .try_into()
+        .unwrap_or_else(|_| contract_api::revert(Error::Serialization as u32));
+    contract_api::ret(ret_value)
 }
 
 #[no_mangle]

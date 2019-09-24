@@ -18,8 +18,8 @@ use contract_ffi::bytesrepr::ToBytes;
 use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::execution::Phase;
 use contract_ffi::key::{Key, HASH_SIZE};
-use contract_ffi::uref::URef;
 use contract_ffi::uref::{AccessRights, UREF_ADDR_SIZE};
+use contract_ffi::uref::{TryFromValueForURefError, URef};
 use contract_ffi::value::account::{BlockTime, PublicKey, PurseId};
 use contract_ffi::value::{Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
@@ -219,10 +219,10 @@ where
                 tracking_copy,
                 phase,
             )?;
-            result.try_into().map_err(|type_name| {
+            result.try_into().map_err(|e: TryFromValueForURefError| {
                 Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
                     "URef".to_string(),
-                    type_name,
+                    e.type_name(),
                 )))
             })?
         };
@@ -272,10 +272,10 @@ where
                 tracking_copy,
                 phase,
             )?;
-            result.try_into().map_err(|type_name| {
+            result.try_into().map_err(|e: TryFromValueForURefError| {
                 Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
                     "URef".to_string(),
-                    type_name,
+                    e.type_name(),
                 )))
             })?
         };
@@ -378,10 +378,10 @@ where
                     phase,
                 )?;
 
-                let mint_result = result.try_into().map_err(|type_name| {
+                let mint_result = result.try_into().map_err(|e: TryFromValueForURefError| {
                     Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
                         "URef".to_string(),
-                        type_name,
+                        e.type_name(),
                     )))
                 });
 

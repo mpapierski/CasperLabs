@@ -2,6 +2,7 @@ use crate::bytesrepr;
 use crate::value::Value;
 use alloc::vec::Vec;
 use bytesrepr::{Error, ToBytes};
+use core::convert::TryInto;
 
 /// Parses `Self` into a byte representation that is ABI compliant.
 /// It means that each type of the tuple have to implement `ToBytes`.
@@ -20,12 +21,16 @@ impl ArgsParser for () {
 
 macro_rules! impl_argsparser_tuple {
     ( $($name:ident)+) => (
-        impl<$($name: Into<Value> + Clone),*> ArgsParser for ($($name,)*) {
+        impl<$($name: TryInto<Value> + Clone),*> ArgsParser for ($($name,)*)
+        where $(<$name as TryInto<Value>>::Error: Into<bytesrepr::Error>,)*
+        {
             #[allow(non_snake_case)]
             fn parse(&self) -> Result<Vec<Vec<u8>>, Error> {
                 let (ref $($name,)+) = self;
-                // TODO: This has to take ownership of $name by cloning it as &T to &Value conversion is not possible. Changing the arguments of &self to self could solve problem of excess clones but requires a lot of public API changes.
-                let values: &[Value] = &[$($name.clone().into(),)+];
+                // TODO: This has to take ownership of $name by cloning it as &T to &Value
+                // conversion is not possible. Changing the arguments of &self to self could
+                // solve problem of excess clones but requires a lot of public API changes.
+                let values: &[Value] = &[$($name.clone().try_into().map_err(Into::into)?,)+];
                 values.into_iter().map(ToBytes::to_bytes).collect()
             }
         }

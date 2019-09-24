@@ -8,6 +8,11 @@ use contract_ffi::value::Value;
 
 const UNBOND_METHOD_NAME: &str = "unbond";
 
+enum Error {
+    UnbondAmountTypeMismatch = 1,
+    UnbondAmountSerialization = 2,
+}
+
 // Unbonding contract.
 //
 // Accepts unbonding amount (of type `Option<u64>`) as first argument.
@@ -17,15 +22,20 @@ const UNBOND_METHOD_NAME: &str = "unbond";
 pub extern "C" fn call() {
     let pos_pointer = unwrap_or_revert(contract_api::get_pos(), 77);
 
-    let unbound_amount_value: Value = contract_api::get_arg(0);
-    let unbond_amount: Option<u64> = unbound_amount_value.try_deserialize().unwrap();
-    let unbond_amount: Option<U512> = unbond_amount.map(U512::from);
+    let unbond_amount: Option<U512> = {
+        let value: Value = contract_api::get_arg(0);
+        let maybe_amount: Option<u64> = value
+            .try_deserialize()
+            .unwrap_or_else(|_| contract_api::revert(Error::UnbondAmountTypeMismatch as u32));
+        maybe_amount.map(Into::into)
+    };
 
     contract_api::call_contract(
         pos_pointer,
         &(
             UNBOND_METHOD_NAME,
-            Value::from_serializable(unbond_amount).unwrap(),
+            Value::from_serializable(unbond_amount)
+                .unwrap_or_else(|_| contract_api::revert(Error::UnbondAmountSerialization as u32)),
         ),
     )
 }

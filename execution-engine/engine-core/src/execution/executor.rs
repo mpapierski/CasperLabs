@@ -8,7 +8,7 @@ use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{BlockTime, PublicKey};
-use contract_ffi::value::{deserialize_arguments, Account, ProtocolVersion, Value};
+use contract_ffi::value::{self, Account, ProtocolVersion, Value};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::CorrelationId;
 use engine_shared::newtypes::Validated;
@@ -161,7 +161,7 @@ impl Executor<Module> for WasmiExecutor {
         // TODO: figure out how this works with the cost model
         // https://casperlabs.atlassian.net/browse/EE-239
         let arguments = on_fail_charge!(
-            deserialize_arguments(args),
+            value::deserialize_arguments(args),
             Gas::from_u64(args.len() as u64),
             effects_snapshot
         );
@@ -239,7 +239,7 @@ impl Executor<Module> for WasmiExecutor {
         let effects_snapshot = state.borrow().effect();
 
         let args = on_fail_charge!(
-            deserialize_arguments(args),
+            value::deserialize_arguments(args),
             Gas::from_u64(args.len() as u64),
             effects_snapshot
         );
@@ -339,7 +339,7 @@ impl Executor<Module> for WasmiExecutor {
     {
         let known_keys = extract_access_rights_from_keys(keys.values().cloned());
 
-        let args: Vec<Value> = deserialize_arguments(args)?;
+        let args: Vec<Value> = value::deserialize_arguments(args)?;
 
         let validated_args = args
             .into_iter()

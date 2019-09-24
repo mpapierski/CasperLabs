@@ -14,9 +14,9 @@ use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::contract_api::{PurseTransferResult, TransferResult};
 use contract_ffi::key::Key;
 use contract_ffi::system_contracts::{self, mint};
-use contract_ffi::uref::{AccessRights, URef};
+use contract_ffi::uref::{AccessRights, TryFromValueForURefError, URef};
 use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLIC_KEY_SIZE};
-use contract_ffi::value::{deserialize_arguments, Account, ProtocolVersion, Value, U512};
+use contract_ffi::value::{self, Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::Validated;
 use engine_shared::transform::TypeMismatch;
@@ -440,7 +440,7 @@ where
                 None => Err(Error::KeyNotFound(key)),
                 Some(value) => {
                     if let Value::Contract(contract) = value {
-                        let args: Vec<Value> = deserialize_arguments(&args_bytes)?;
+                        let args: Vec<Value> = value::deserialize_arguments(&args_bytes)?;
                         let module = parity_wasm::deserialize_buffer(contract.bytes())?;
 
                         Ok((
@@ -733,12 +733,12 @@ where
 
         self.call_contract(mint_contract_key, args_bytes)?;
 
-        let result: URef =
-            deserialize::<Value>(&self.host_buf)?
-                .try_into()
-                .map_err(|type_name| {
-                    Error::TypeMismatch(TypeMismatch::new("URef".to_string(), type_name))
-                })?;
+        let result_value: Value = deserialize(&self.host_buf)?;
+        let result: URef = result_value
+            .try_into()
+            .map_err(|e: TryFromValueForURefError| {
+                Error::TypeMismatch(TypeMismatch::new("URef".to_string(), e.type_name()))
+            })?;
 
         Ok(PurseId::new(result))
     }
