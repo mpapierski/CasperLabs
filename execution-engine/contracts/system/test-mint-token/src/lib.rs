@@ -7,7 +7,7 @@ use alloc::string::String;
 
 use contract_ffi::contract_api;
 use contract_ffi::key::Key;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 #[no_mangle]
 pub extern "C" fn call() {
@@ -32,13 +32,9 @@ pub extern "C" fn call() {
 
     // TODO(mpapierski): Identify new Value variants
     let new_amount1: Option<U512> =
-        contract_api::call_contract::<_, Value>(mint.clone(), &("balance", purse1))
-            .try_deserialize()
-            .unwrap();
+        contract_api::call_contract(mint.clone(), &("balance", purse1));
     let new_amount2: Option<U512> =
-        contract_api::call_contract::<_, Value>(mint.clone(), &("balance", purse2))
-            .try_deserialize()
-            .unwrap();
+        contract_api::call_contract(mint.clone(), &("balance", purse2));
 
     assert!(new_amount1.unwrap() == U512::from(30));
     assert!(new_amount2.unwrap() == U512::from(370));

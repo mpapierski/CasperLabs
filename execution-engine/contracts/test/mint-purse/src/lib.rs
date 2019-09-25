@@ -5,7 +5,7 @@ extern crate contract_ffi;
 use contract_ffi::contract_api::{self, Error as ApiError};
 use contract_ffi::uref::URef;
 use contract_ffi::value::account::PurseId;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 #[repr(u16)]
 enum Error {
@@ -30,9 +30,7 @@ pub extern "C" fn call() {
 
     // TODO(mpapierski): Identify additional Value variants
     let balance: Option<U512> =
-        contract_api::call_contract::<_, Value>(mint, &("balance", new_purse))
-            .try_deserialize()
-            .unwrap();
+        contract_api::call_contract(mint, &("balance", new_purse));
 
     match balance {
         None => contract_api::revert(ApiError::User(Error::BalanceNotFound as u16).into()),

@@ -27,7 +27,7 @@ fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
 }
 
 fn unbond(pos: &ContractPointer, amount: Option<U512>) {
-    call_contract::<_, ()>(pos.clone(), &(POS_UNBOND, Value::from_serializable(amount).unwrap()));
+    call_contract::<_, ()>(pos.clone(), &(POS_UNBOND, amount));
 }
 
 const POS_BOND: &str = "bond";

@@ -4,7 +4,7 @@ extern crate contract_ffi;
 use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::contract_api::{self, Error};
 use contract_ffi::value::account::PurseId;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 const POS_BOND: &str = "bond";
 const POS_UNBOND: &str = "unbond";
@@ -16,7 +16,7 @@ fn bond(pos: ContractPointer, amount: U512, source: PurseId) {
 fn unbond(pos: ContractPointer, amount: Option<U512>) {
     contract_api::call_contract::<_, ()>(
         pos,
-        &(POS_UNBOND, Value::from_serializable(amount).unwrap()),
+        &(POS_UNBOND, amount),
     );
 }
 

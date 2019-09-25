@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 use contract_ffi::key::Key;
 use contract_ffi::value::account::{Account, PublicKey, PurseId};
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 use engine_core::engine_state::genesis::{POS_PAYMENT_PURSE, POS_REWARDS_PURSE};
 use engine_core::engine_state::MAX_PAYMENT;
@@ -61,11 +61,11 @@ fn finalize_payment_should_not_be_run_by_non_system_accounts() {
     let spent_amount = U512::from(75);
     let refund_purse: Option<PurseId> = None;
 
-    let args: (U512, Value, Value, Value) = (
+    let args = (
         payment_amount,
-        Value::from_serializable(refund_purse).unwrap(),
-        Value::from_serializable(Some(spent_amount)).unwrap(),
-        Value::from_serializable(Some(ACCOUNT_ADDR) as Option<[u8; 32]>).unwrap(),
+        refund_purse,
+        Some(spent_amount),
+        Some(ACCOUNT_ADDR),
     );
 
     assert!(builder
@@ -103,11 +103,11 @@ fn finalize_payment_should_refund_to_specified_purse() {
     // the deploy because payment code is enabled.
 
     // TODO(mpapierski): Identify additional Value variants
-    let args: (U512, Value, Value, Value) = (
+    let args = (
         payment_amount,
-        Value::from_serializable(refund_purse_flag).unwrap(),
-        Value::from_serializable(None as Option<U512>).unwrap(),
-        Value::from_serializable(None as Option<PublicKey>).unwrap(),
+        refund_purse_flag,
+        None as Option<U512>,
+        None as Option<PublicKey>,
     );
 
     builder.run_genesis(GENESIS_ADDR, HashMap::default());

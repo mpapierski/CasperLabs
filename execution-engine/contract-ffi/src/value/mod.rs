@@ -460,8 +460,10 @@ impl_support_for_serializable_types! {
     [u8; 32]
     BTreeMap<PublicKey, U512>
     Option<PublicKey>
+    Option<PurseId>
     Option<U512>
     Option<u64>
+    Option<[u8; 32]>
     Phase
     PublicKey
     u32
