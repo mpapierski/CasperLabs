@@ -5,8 +5,6 @@ extern crate core;
 
 use contract_ffi::contract_api::{self, Error};
 use contract_ffi::execution::Phase;
-use contract_ffi::value::Value;
-use core::convert::TryInto;
 
 #[no_mangle]
 pub extern "C" fn call() {

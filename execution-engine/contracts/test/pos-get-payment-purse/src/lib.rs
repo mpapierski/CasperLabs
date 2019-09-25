@@ -2,7 +2,6 @@
 
 extern crate alloc;
 extern crate contract_ffi;
-use alloc::vec::Vec;
 
 use contract_ffi::contract_api::{self, Error as ApiError, PurseTransferResult};
 use contract_ffi::value::account::PurseId;
@@ -27,8 +26,7 @@ pub extern "C" fn call() {
         Some(Err(_)) => contract_api::revert(ApiError::InvalidArgument.into()),
         None => contract_api::revert(ApiError::MissingArgument.into()),
     };
-    let payment_purse: PurseId =
-        contract_api::call_contract(pos_pointer, &("get_payment_purse",));
+    let payment_purse: PurseId = contract_api::call_contract(pos_pointer, &("get_payment_purse",));
 
     // can deposit
     if let PurseTransferResult::TransferError =

@@ -4,7 +4,6 @@ extern crate alloc;
 extern crate contract_ffi;
 use alloc::string::String;
 use contract_ffi::contract_api::{self, Error, PurseTransferResult};
-use contract_ffi::key::Key;
 use contract_ffi::value::account::PurseId;
 use contract_ffi::value::U512;
 

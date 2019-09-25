@@ -6,7 +6,7 @@ extern crate contract_ffi;
 use alloc::vec::Vec;
 use contract_ffi::contract_api::{self, Error, TransferResult};
 use contract_ffi::value::account::PublicKey;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 use core::convert::TryFrom;
 
 #[no_mangle]

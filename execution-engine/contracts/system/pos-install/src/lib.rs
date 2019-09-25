@@ -11,7 +11,6 @@ use contract_ffi::contract_api::{self, Error};
 use contract_ffi::key::Key;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{PublicKey, PurseId};
-use contract_ffi::value::Value;
 use contract_ffi::value::U512;
 use core::fmt::Write;
 

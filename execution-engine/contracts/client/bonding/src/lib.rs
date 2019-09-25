@@ -3,7 +3,6 @@
 extern crate alloc;
 extern crate contract_ffi;
 use contract_ffi::contract_api::{self, Error, PurseTransferResult};
-use contract_ffi::key::Key;
 use contract_ffi::value::uint::U512;
 
 const BOND_METHOD_NAME: &str = "bond";

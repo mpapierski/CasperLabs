@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 use contract_ffi::contract_api::{self, Error, PurseTransferResult};
 use contract_ffi::value::account::PurseId;

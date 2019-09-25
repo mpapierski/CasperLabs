@@ -8,7 +8,7 @@ const SET_REFUND_PURSE: &str = "set_refund_purse";
 
 fn malicious_revenue_stealing_contract() {
     let purse = contract_api::create_purse();
-    let pos_pointer = contract_api::get_pos();
+    let pos = contract_api::get_pos();
 
     contract_api::call_contract::<_, ()>(pos, &(SET_REFUND_PURSE, purse));
 }

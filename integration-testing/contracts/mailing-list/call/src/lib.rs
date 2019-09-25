@@ -11,6 +11,7 @@ use contract_ffi::contract_api::pointers::*;
 use contract_ffi::contract_api::*;
 use contract_ffi::contract_api::Error as ApiError;
 use contract_ffi::key::Key;
+use contract_ffi::value::Value;
 
 #[repr(u16)]
 enum Error {
@@ -42,14 +43,14 @@ pub extern "C" fn call() {
     let method = "sub";
     let name = "CasperLabs";
     let args = (method, name);
-    match call_contract(pointer.clone(), &args) {
+    match call_contract::<_, Option<Value>>(pointer.clone(), &args) {
         Some(sub_key) => {
             let key_name = "mail_feed";
             add_uref(key_name, &sub_key.as_key().unwrap());
 
             let key_name_uref =
                 get_uref(key_name).unwrap_or_else(|| revert(ApiError::from(Error::GetKeyNameURef).into()));
-            if sub_key != key_name_uref {
+            if sub_key != Value::Key(key_name_uref) {
                 revert(ApiError::from(Error::BadSubKey).into());
             }
 
@@ -58,7 +59,7 @@ pub extern "C" fn call() {
             let args = (method, message);
             let _result: () = call_contract(pointer, &args);
 
-            let turef: TURef<Vec<String>> = sub_key.to_turef().unwrap();
+            let turef: TURef<Vec<String>> = sub_key.as_key().unwrap().to_turef().unwrap();
             let messages = read(turef)
                 .unwrap_or_else(|_| revert(ApiError::from(Error::GetMessagesURef).into()))
                 .unwrap_or_else(|| revert(ApiError::from(Error::FindMessagesURef).into()));

@@ -6,7 +6,6 @@ extern crate contract_ffi;
 
 use contract_ffi::contract_api::{get_arg, revert, update_associated_key};
 use contract_ffi::value::account::{PublicKey, Weight};
-use contract_ffi::value::Value;
 
 #[no_mangle]
 pub extern "C" fn call() {

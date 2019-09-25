@@ -107,7 +107,7 @@ pub extern "C" fn counter_ext() {
                 Ok(None) => revert(Error::ValueNotFound.into()),
                 Err(_) => revert(Error::Read.into()),
             };
-            ret(&result);
+            ret(result);
         }
         _ => panic!("Unknown method name!"),
     }

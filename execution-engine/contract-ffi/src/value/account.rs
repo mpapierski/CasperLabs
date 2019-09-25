@@ -36,6 +36,12 @@ impl TryFrom<Value> for PurseId {
     }
 }
 
+impl From<PurseId> for Value {
+    fn from(value: PurseId) -> Value {
+        Value::Key(Key::URef(value.value()))
+    }
+}
+
 impl PurseId {
     pub fn new(uref: URef) -> Self {
         PurseId(uref)
@@ -284,14 +290,6 @@ pub const MAX_KEYS: usize = 10;
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Weight(u8);
 
-impl TryFrom<Value> for Weight {
-    type Error = Error;
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let weight_value: u8 = value.try_deserialize()?;
-        Ok(Weight::new(weight_value))
-    }
-}
-
 impl Weight {
     pub fn new(weight: u8) -> Weight {
         Weight(weight)
@@ -306,13 +304,6 @@ pub const WEIGHT_SIZE: usize = U8_SIZE;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PublicKey([u8; KEY_SIZE]);
-
-impl TryFrom<Value> for PublicKey {
-    type Error = Error;
-    fn try_from(value: Value) -> Result<PublicKey, Self::Error> {
-        value.try_deserialize()
-    }
-}
 
 impl Display for PublicKey {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {

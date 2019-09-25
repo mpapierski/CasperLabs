@@ -1,15 +1,14 @@
 #![no_std]
 
 extern crate contract_ffi;
-use contract_ffi::contract_api::{self, Error};
+use contract_ffi::contract_api::{self, Error as ApiError};
 use contract_ffi::value::uint::U512;
 use contract_ffi::value::Value;
 
 const UNBOND_METHOD_NAME: &str = "unbond";
 
 enum Error {
-    UnbondAmountTypeMismatch = 1,
-    UnbondAmountSerialization = 2,
+    UnbondAmountSerialization = 1,
 }
 
 // Unbonding contract.
@@ -24,8 +23,8 @@ pub extern "C" fn call() {
     let unbond_amount: Option<U512> = match contract_api::get_arg::<Option<u64>>(0) {
         Some(Ok(Some(data))) => Some(U512::from(data)),
         Some(Ok(None)) => None,
-        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
-        None => contract_api::revert(Error::MissingArgument.into()),
+        Some(Err(_)) => contract_api::revert(ApiError::InvalidArgument.into()),
+        None => contract_api::revert(ApiError::MissingArgument.into()),
     };
 
     contract_api::call_contract(

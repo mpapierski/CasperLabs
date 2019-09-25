@@ -10,7 +10,6 @@ use contract_ffi::contract_api::{
     transfer_from_purse_to_account, transfer_from_purse_to_purse, Error as ApiError,
     PurseTransferResult, TransferResult,
 };
-use contract_ffi::key::Key;
 use contract_ffi::value::account::{PublicKey, PurseId};
 use contract_ffi::value::{U512, Value};
 
@@ -70,7 +69,7 @@ pub extern "C" fn call() {
             revert(ApiError::User(Error::UnableToSeedAccount as u16).into());
         }
     } else if command == TEST_UNBOND {
-        let maybe_amount: Option<U512> = get_arg::<Value>(1).try_deserialize().unwrap();
+        let maybe_amount: Option<U512> = get_arg(1).unwrap().unwrap();
         unbond(&pos_pointer, maybe_amount);
     } else {
         revert(ApiError::User(Error::UnknownCommand as u16).into());

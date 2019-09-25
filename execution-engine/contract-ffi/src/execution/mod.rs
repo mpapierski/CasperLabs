@@ -1,7 +1,5 @@
 use crate::bytesrepr::{Error, FromBytes, ToBytes};
-use crate::value::Value;
 use alloc::vec::Vec;
-use core::convert::TryFrom;
 use num_traits::{FromPrimitive, ToPrimitive};
 
 pub const PHASE_SIZE: usize = 1;
@@ -13,13 +11,6 @@ pub enum Phase {
     Payment = 1,
     Session = 2,
     FinalizePayment = 3,
-}
-
-impl TryFrom<Value> for Phase {
-    type Error = Error;
-    fn try_from(value: Value) -> Result<Phase, Error> {
-        value.try_deserialize()
-    }
 }
 
 impl ToBytes for Phase {

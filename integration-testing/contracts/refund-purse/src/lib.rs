@@ -1,11 +1,9 @@
 #![no_std]
 
 extern crate contract_ffi;
-use alloc::vec::Vec;
 
 use contract_ffi::contract_api;
 use contract_ffi::contract_api::pointers::ContractPointer;
-use contract_ffi::key::Key;
 use contract_ffi::value::account::PurseId;
 use contract_ffi::value::Value;
 

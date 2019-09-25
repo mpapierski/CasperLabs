@@ -3,7 +3,6 @@
 extern crate contract_ffi;
 use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::contract_api::{self, Error};
-use contract_ffi::key::Key;
 use contract_ffi::value::account::PurseId;
 use contract_ffi::value::{Value, U512};
 

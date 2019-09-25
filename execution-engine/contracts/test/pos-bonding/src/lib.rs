@@ -2,13 +2,12 @@
 
 extern crate alloc;
 extern crate contract_ffi;
-use alloc::prelude::v1::{String, Vec};
+use alloc::prelude::v1::String;
 
 use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::contract_api::{self, Error as ApiError, PurseTransferResult, TransferResult};
-use contract_ffi::key::Key;
 use contract_ffi::value::account::{PublicKey, PurseId};
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 #[repr(u16)]
 enum Error {
@@ -17,10 +16,7 @@ enum Error {
 }
 
 fn bond(pos: &ContractPointer, amount: &U512, source: PurseId) {
-    contract_api::call_contract::<_, ()>(
-        pos.clone(),
-        &(POS_BOND, *amount, source),
-    );
+    contract_api::call_contract::<_, ()>(pos.clone(), &(POS_BOND, *amount, source));
 }
 
 fn unbond(pos: &ContractPointer, amount: Option<U512>) {

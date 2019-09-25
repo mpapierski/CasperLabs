@@ -7,8 +7,6 @@ use contract_ffi::contract_api::{
     add_associated_key, get_arg, revert, set_action_threshold, Error,
 };
 use contract_ffi::value::account::{ActionType, AddKeyFailure, PublicKey, Weight};
-use contract_ffi::value::Value;
-use core::convert::TryInto;
 
 #[no_mangle]
 pub extern "C" fn call() {

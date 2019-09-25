@@ -3,11 +3,7 @@
 extern crate contract_ffi;
 
 use contract_ffi::contract_api;
-use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
-use contract_ffi::contract_api::{call_contract, get_uref, read, revert};
-use contract_ffi::key::Key;
-use contract_ffi::uref::AccessRights;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 #[no_mangle]
 pub extern "C" fn call() {
@@ -18,5 +14,5 @@ pub extern "C" fn call() {
         0 => None,
         amount => Some(amount.into()),
     };
-    let _result: () = contract_api::call_contract(pos_pointer, &("unbond", unbond_amount), &vec![]);
+    let _result: () = contract_api::call_contract(pos_pointer, &("unbond", unbond_amount));
 }

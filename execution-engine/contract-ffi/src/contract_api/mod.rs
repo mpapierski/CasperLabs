@@ -4,7 +4,7 @@ pub mod pointers;
 
 use self::alloc_util::*;
 use self::pointers::*;
-use crate::bytesrepr::{self, deserialize, FromBytes, ToBytes};
+use crate::bytesrepr::{self, deserialize, ToBytes};
 use crate::execution::{Phase, PHASE_SIZE};
 use crate::ext_ffi;
 use crate::key::{Key, UREF_SIZE};
@@ -339,7 +339,10 @@ fn load_arg(index: u32) -> Option<usize> {
 /// Return the i-th argument passed to the host for the current module
 /// invocation. Note that this is only relevant to contracts stored on-chain
 /// since a contract deployed directly is not invoked with any arguments.
-pub fn get_arg<T: FromBytes>(i: u32) -> Option<Result<T, bytesrepr::Error>> {
+pub fn get_arg<T>(i: u32) -> Option<Result<T, bytesrepr::Error>>
+where
+    T: TryFrom<Value>,
+{
     let arg_size = load_arg(i)?;
     let arg_bytes = {
         let dest_ptr = alloc_bytes(arg_size);
@@ -348,7 +351,10 @@ pub fn get_arg<T: FromBytes>(i: u32) -> Option<Result<T, bytesrepr::Error>> {
             Vec::from_raw_parts(dest_ptr, arg_size, arg_size)
         }
     };
-    Some(deserialize(&arg_bytes))
+    Some(deserialize::<Value>(&arg_bytes).and_then(|value| {
+        T::try_from(value)
+            .map_err(|_| bytesrepr::Error::custom("T could not be derived from Value"))
+    }))
 }
 
 /// Return the unforgable reference known by the current module under the given

@@ -306,17 +306,18 @@ where
     /// Load the i-th argument invoked as part of a `sub_call` into
     /// the runtime buffer so that a subsequent `get_arg` can return it
     /// to the caller.
-    pub fn load_arg(&mut self, i: usize) -> isize {
-        match self.context.args().get(i) {
+    pub fn load_arg(&mut self, i: usize) -> Result<isize, Trap> {
+        let size = match self.context.args().get(i) {
             Some(arg) => {
-                self.host_buf = arg.clone();
+                self.host_buf = arg.get().to_bytes().map_err(Error::BytesRepr)?;
                 self.host_buf.len() as isize
             }
             None => {
                 self.host_buf.clear();
                 -1
             }
-        }
+        };
+        Ok(size)
     }
 
     /// Load the uref known by the given name into the Wasm memory

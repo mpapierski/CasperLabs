@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::TryInto;
 
 use crate::support::test_support::{
     InMemoryWasmTestBuilder, DEFAULT_BLOCK_TIME, STANDARD_PAYMENT_CONTRACT,

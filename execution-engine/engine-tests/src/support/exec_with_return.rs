@@ -1,5 +1,4 @@
 use crate::support::test_support::{self, WasmTestBuilder};
-use contract_ffi::bytesrepr::FromBytes;
 use contract_ffi::execution::Phase;
 use contract_ffi::key::Key;
 use contract_ffi::uref::URef;

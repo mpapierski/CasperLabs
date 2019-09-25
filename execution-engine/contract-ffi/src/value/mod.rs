@@ -431,56 +431,43 @@ impl ToBytes for Vec<Value> {
     }
 }
 
-impl From<PurseId> for Value {
-    fn from(value: PurseId) -> Value {
-        // TODO(mpapierski): This might return Value::URef (or either Value::PurseId) in second pass
-        Value::Key(Key::URef(value.value()))
-    }
+// This implements explicit specialization for TryFrom in/out Value for types
+// that are serializable, but Rust forbids us from doing generic impl based on
+// T: ToBytes or T: FromBytes.
+//
+// Once new Value variants are specified this macro will go away and each of the
+// specializations will be explicit.
+macro_rules! impl_support_for_serializable_types {
+    ( $($tt:ty)+) => (
+        $(impl TryFrom<Value> for $tt {
+            type Error = Error;
+            fn try_from(value: Value) -> Result<Self, Self::Error> {
+                value.try_deserialize()
+            }
+        }
+
+        impl TryFrom<$tt> for Value {
+            type Error = Error;
+            fn try_from(value: $tt) -> Result<Self, Self::Error> {
+                Value::from_serializable(value)
+            }
+        }
+    )+);
 }
 
-impl TryFrom<PublicKey> for Value {
-    type Error = Error;
-    fn try_from(value: PublicKey) -> Result<Value, Self::Error> {
-        // TODO(mpapierski): This might return Value::PublicKey in second pass
-        let bytes = value.to_bytes()?;
-        Ok(Value::ByteArray(bytes))
-    }
-}
-
-impl TryFrom<[u8; 32]> for Value {
-    type Error = Error;
-    fn try_from(value: [u8; 32]) -> Result<Value, Self::Error> {
-        // TODO(mpapierski): This might return something like Array32 in second pass
-        let bytes = value.to_bytes()?;
-        Ok(Value::ByteArray(bytes))
-    }
-}
-
-impl TryFrom<BTreeMap<PublicKey, U512>> for Value {
-    type Error = Error;
-    fn try_from(value: BTreeMap<PublicKey, U512>) -> Result<Value, Self::Error> {
-        // TODO(mpapierski): This might return Value::Map in second pass
-        let bytes = value.to_bytes()?;
-        Ok(Value::ByteArray(bytes))
-    }
-}
-
-impl TryFrom<Weight> for Value {
-    type Error = Error;
-    fn try_from(value: Weight) -> Result<Value, Self::Error> {
-        // TODO(mpapierski): Value::U8 perhaps
-        let bytes = value.to_bytes()?;
-        Ok(Value::ByteArray(bytes))
-    }
-}
-
-impl TryFrom<Phase> for Value {
-    type Error = Error;
-    fn try_from(value: Phase) -> Result<Value, Self::Error> {
-        // TODO(mpapierski): Value::U8 perhaps
-        let bytes = value.to_bytes()?;
-        Ok(Value::ByteArray(bytes))
-    }
+// TODO(mpapierski): Identify additional Value variant
+impl_support_for_serializable_types! {
+    [u8; 32]
+    BTreeMap<PublicKey, U512>
+    Option<PublicKey>
+    Option<U512>
+    Option<u64>
+    Phase
+    PublicKey
+    u32
+    u8
+    Vec<Vec<u8>>
+    Weight
 }
 
 #[cfg(test)]

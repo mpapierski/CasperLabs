@@ -10,7 +10,6 @@ extern crate contract_ffi;
 use contract_ffi::contract_api::pointers::TURef;
 use contract_ffi::contract_api::*;
 use contract_ffi::key::Key;
-use contract_ffi::value::U512;
 
 #[no_mangle]
 pub extern "C" fn counter_ext() {
@@ -24,7 +23,7 @@ pub extern "C" fn counter_ext() {
                 Ok(None) => revert(Error::ValueNotFound.into()),
                 Err(_) => revert(Error::Read.into()),
             };
-            ret(&result);
+            ret(result);
         }
         _ => panic!("Unknown method name!"),
     }
