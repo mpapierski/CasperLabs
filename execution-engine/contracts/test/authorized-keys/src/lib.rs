@@ -3,17 +3,12 @@
 
 extern crate alloc;
 extern crate contract_ffi;
-extern crate core;
-
-use contract_ffi::contract_api::{add_associated_key, get_arg, revert, set_action_threshold};
+use contract_ffi::contract_api::{
+    add_associated_key, get_arg, revert, set_action_threshold, Error,
+};
 use contract_ffi::value::account::{ActionType, AddKeyFailure, PublicKey, Weight};
 use contract_ffi::value::Value;
 use core::convert::TryInto;
-
-enum Error {
-    KeyManagementThresholdDeserialization = 1,
-    DeployThresholdDeserialization = 2,
-}
 
 #[no_mangle]
 pub extern "C" fn call() {
@@ -23,14 +18,17 @@ pub extern "C" fn call() {
         Ok(_) => {}
     };
 
-    // TODO(mpapierski): Identify additional Value variants
-    let key_management_threshold: Weight = get_arg::<Value>(0)
-        .try_into()
-        .unwrap_or_else(|_| revert(Error::KeyManagementThresholdDeserialization as u32));
-    // TODO(mpapierski): Identify additional Value variants
-    let deploy_threshold: Weight = get_arg::<Value>(1)
-        .try_into()
-        .unwrap_or_else(|_| revert(Error::DeployThresholdDeserialization as u32));
+    let key_management_threshold: Weight = match get_arg(0) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => revert(Error::InvalidArgument.into()),
+        None => revert(Error::MissingArgument.into()),
+    };
+    let deploy_threshold: Weight = match get_arg(1) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => revert(Error::InvalidArgument.into()),
+        None => revert(Error::MissingArgument.into()),
+    };
+
     if key_management_threshold != Weight::new(0) {
         set_action_threshold(ActionType::KeyManagement, key_management_threshold)
             .unwrap_or_else(|_| revert(100));

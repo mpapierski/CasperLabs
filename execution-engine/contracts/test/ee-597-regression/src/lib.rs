@@ -2,11 +2,9 @@
 
 extern crate alloc;
 extern crate contract_ffi;
-
 use contract_ffi::contract_api;
-use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
+use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::key::Key;
-use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::PurseId;
 use contract_ffi::value::U512;
 
@@ -35,7 +33,7 @@ fn bond(pos: ContractPointer, amount: &U512, source: PurseId) {
 #[no_mangle]
 pub extern "C" fn call() {
     bond(
-        get_pos_contract(),
+        contract_api::get_pos(),
         &U512::from(0),
         contract_api::main_purse(),
     );

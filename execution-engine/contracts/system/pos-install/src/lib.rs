@@ -6,8 +6,8 @@ extern crate pos;
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use contract_ffi::contract_api;
 use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
+use contract_ffi::contract_api::{self, Error};
 use contract_ffi::key::Key;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{PublicKey, PurseId};
@@ -34,14 +34,20 @@ pub extern "C" fn pos_ext() {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let mint_uref: URef = contract_api::get_arg(Args::MintURef as u32);
+    let mint_uref: URef = match contract_api::get_arg(Args::MintURef as u32) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+        None => contract_api::revert(Error::MissingArgument.into()),
+    };
     let mint = ContractPointer::URef(TURef::new(mint_uref.addr(), AccessRights::READ));
 
     // TODO(mpapierski): Identify additional Value variants
     let genesis_validators: BTreeMap<PublicKey, U512> =
-        contract_api::get_arg::<Value>(Args::GenesisValidators as u32)
-            .try_deserialize()
-            .unwrap();
+        match contract_api::get_arg(Args::GenesisValidators as u32) {
+            Some(Ok(data)) => data,
+            Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+            None => contract_api::revert(Error::MissingArgument.into()),
+        };
 
     // Add genesis validators to PoS contract object.
     // For now, we are storing validators in `known_urefs` map of the PoS contract

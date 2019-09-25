@@ -10,8 +10,8 @@ use contract_ffi::value::Value;
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let account: PublicKey = get_arg(0);
-    let weight_val: u8 = get_arg::<Value>(1).try_deserialize().unwrap();
+    let account: PublicKey = get_arg(0).unwrap().unwrap();
+    let weight_val: u32 = get_arg(1).unwrap().unwrap();
     let weight = Weight::new(weight_val as u8);
 
     update_associated_key(account, weight)

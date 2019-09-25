@@ -2,19 +2,13 @@
 
 extern crate alloc;
 extern crate contract_ffi;
+use alloc::vec::Vec;
 
-use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
-use contract_ffi::contract_api::{self, PurseTransferResult};
+use contract_ffi::contract_api::pointers::ContractPointer;
+use contract_ffi::contract_api::{self, Error, PurseTransferResult};
 use contract_ffi::key::Key;
-use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::{PublicKey, PurseId};
 use contract_ffi::value::{Value, U512};
-
-enum Error {
-    GetPosOuterURef = 1,
-    GetPosInnerURef = 2,
-    SubmitPayment = 99,
-}
 
 fn set_refund_purse(pos: &ContractPointer, p: &PurseId) {
     contract_api::call_contract::<_, ()>(pos.clone(), &("set_refund_purse", *p));
@@ -30,7 +24,7 @@ fn submit_payment(pos: &ContractPointer, amount: U512) {
     if let PurseTransferResult::TransferError =
         contract_api::transfer_from_purse_to_purse(main_purse, payment_purse, amount)
     {
-        contract_api::revert(Error::SubmitPayment as u32);
+        contract_api::revert(Error::Transfer.into());
     }
 }
 
@@ -40,26 +34,28 @@ fn finalize_payment(pos: &ContractPointer, amount_spent: U512, account: PublicKe
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let pos_pointer = {
-        let outer: TURef<Key> = contract_api::get_uref("pos")
-            .and_then(Key::to_turef)
-            .unwrap_or_else(|| contract_api::revert(Error::GetPosInnerURef as u32));
-        if let Some(ContractPointer::URef(inner)) = contract_api::read::<Key>(outer).to_c_ptr() {
-            ContractPointer::URef(TURef::new(inner.addr(), AccessRights::READ))
-        } else {
-            contract_api::revert(Error::GetPosOuterURef as u32);
-        }
-    };
+    let pos_pointer = contract_api::get_pos();
 
-    let payment_amount: U512 = contract_api::get_arg(0);
-    // TODO(mpapierski): Identify additional Value variants
-    let refund_purse_flag: u8 = contract_api::get_arg::<Value>(1).try_deserialize().unwrap();
-    // TODO(mpapierski): Identify additional Value variants
-    let maybe_amount_spent: Option<U512> =
-        contract_api::get_arg::<Value>(2).try_deserialize().unwrap();
-    // TODO(mpapierski): Identify additional Value variants
-    let maybe_account: Option<PublicKey> =
-        contract_api::get_arg::<Value>(3).try_deserialize().unwrap();
+    let payment_amount: U512 = match contract_api::get_arg(0) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+        None => contract_api::revert(Error::MissingArgument.into()),
+    };
+    let refund_purse_flag: u8 = match contract_api::get_arg(1) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+        None => contract_api::revert(Error::MissingArgument.into()),
+    };
+    let maybe_amount_spent: Option<U512> = match contract_api::get_arg(2) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+        None => contract_api::revert(Error::MissingArgument.into()),
+    };
+    let maybe_account: Option<PublicKey> = match contract_api::get_arg(3) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => contract_api::revert(Error::InvalidArgument.into()),
+        None => contract_api::revert(Error::MissingArgument.into()),
+    };
 
     submit_payment(&pos_pointer, payment_amount);
     if refund_purse_flag != 0 {

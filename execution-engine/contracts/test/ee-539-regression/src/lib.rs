@@ -6,7 +6,9 @@ extern crate core;
 
 extern crate contract_ffi;
 
-use contract_ffi::contract_api::{add_associated_key, get_arg, revert, set_action_threshold};
+use contract_ffi::contract_api::{
+    add_associated_key, get_arg, revert, set_action_threshold, Error,
+};
 use contract_ffi::value::account::{ActionType, PublicKey, Weight};
 use contract_ffi::value::Value;
 use core::convert::TryInto;
@@ -21,16 +23,17 @@ enum Error {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    add_associated_key(PublicKey::new([123; 32]), Weight::new(254))
-        .unwrap_or_else(|_| revert(Error::AddAssociatedKey as u32));
-    // TODO(mpapierski): Identify additional Value variants
-    let key_management_threshold: Weight = get_arg::<Value>(0)
-        .try_into()
-        .unwrap_or_else(|_| revert(Error::KeyManagementThreshold as u32));
-    // TODO(mpapierski): Identify additional Value variants
-    let deployment_threshold: Weight = get_arg::<Value>(1)
-        .try_into()
-        .unwrap_or_else(|_| revert(Error::DeploymentThreshold as u32));
+    add_associated_key(PublicKey::new([123; 32]), Weight::new(254)).unwrap_or_else(|_| revert(50));
+    let key_management_threshold: Weight = match get_arg(0) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => revert(Error::InvalidArgument.into()),
+        None => revert(Error::MissingArgument.into()),
+    };
+    let deployment_threshold: Weight = match get_arg(1) {
+        Some(Ok(data)) => data,
+        Some(Err(_)) => revert(Error::InvalidArgument.into()),
+        None => revert(Error::MissingArgument.into()),
+    };
 
     set_action_threshold(ActionType::KeyManagement, key_management_threshold)
         .unwrap_or_else(|_| revert(Error::SetKeymanagementThreshold as u32));

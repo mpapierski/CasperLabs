@@ -1,18 +1,13 @@
 #![no_std]
 
 extern crate contract_ffi;
+use alloc::vec::Vec;
 
 use contract_ffi::contract_api;
-use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
+use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::key::Key;
-use contract_ffi::uref::AccessRights;
 use contract_ffi::value::account::PurseId;
 use contract_ffi::value::Value;
-
-enum Error {
-    GetPosOuterURef = 1000,
-    GetPosInnerURef = 1001,
-}
 
 fn set_refund_purse(pos: &ContractPointer, p: &PurseId) {
     contract_api::call_contract::<_, ()>(
@@ -27,20 +22,9 @@ fn get_refund_purse(pos: &ContractPointer) -> Option<PurseId> {
         .unwrap()
 }
 
-fn get_pos_contract() -> ContractPointer {
-    let outer: TURef<Key> = contract_api::get_uref("pos")
-        .and_then(Key::to_turef)
-        .unwrap_or_else(|| contract_api::revert(Error::GetPosInnerURef as u32));
-    if let Some(ContractPointer::URef(inner)) = contract_api::read::<Key>(outer).to_c_ptr() {
-        ContractPointer::URef(TURef::new(inner.addr(), AccessRights::READ))
-    } else {
-        contract_api::revert(Error::GetPosOuterURef as u32)
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn call() {
-    let pos_pointer = get_pos_contract();
+    let pos_pointer = contract_api::get_pos();
 
     let p1 = contract_api::create_purse();
     let p2 = contract_api::create_purse();

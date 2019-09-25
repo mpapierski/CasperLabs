@@ -1,8 +1,8 @@
 #![no_std]
 
 extern crate contract_ffi;
-use contract_ffi::contract_api::{call_contract, revert, get_uref};
 use contract_ffi::contract_api::pointers::ContractPointer;
+use contract_ffi::contract_api::{call_contract, get_uref, revert};
 use contract_ffi::key::Key;
 
 #[no_mangle]

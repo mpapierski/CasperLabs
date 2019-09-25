@@ -12,7 +12,7 @@ use contract_ffi::value::Value;
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let public_key: PublicKey = get_arg(0);
+    let public_key: PublicKey = get_arg(0).unwrap().unwrap();
     let transfer_amount: u32 = get_arg::<Value>(1).try_deserialize().unwrap();
 
     let amount = U512::from(transfer_amount);
