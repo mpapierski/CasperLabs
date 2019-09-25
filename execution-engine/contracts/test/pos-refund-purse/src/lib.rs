@@ -21,9 +21,7 @@ fn set_refund_purse(pos: &ContractPointer, p: &PurseId) {
 
 fn get_refund_purse(pos: &ContractPointer) -> Option<PurseId> {
     // TODO(mpapierski): Identify additional Value variants
-    contract_api::call_contract::<_, Value>(pos.clone(), &("get_refund_purse",))
-        .try_deserialize()
-        .unwrap()
+    contract_api::call_contract(pos.clone(), &("get_refund_purse",))
 }
 
 fn get_payment_purse(pos: &ContractPointer) -> PurseId {
