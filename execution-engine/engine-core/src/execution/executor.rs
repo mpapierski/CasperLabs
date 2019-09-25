@@ -338,8 +338,7 @@ impl Executor<Module> for WasmiExecutor {
         R::Error: Into<Error>,
     {
         let known_keys = extract_access_rights_from_keys(keys.values().cloned());
-
-        let args: Vec<Value> = value::deserialize_arguments(args)?;
+        let args = value::deserialize_arguments(args)?;
 
         let validated_args = args
             .into_iter()

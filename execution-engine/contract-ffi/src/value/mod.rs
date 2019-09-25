@@ -297,25 +297,11 @@ impl Value {
 }
 
 /// Deserializes argument list from a single slice of bytes.
-///
-/// First it deserializes a slice of bytes into a vector of vectors of bytes which is each expected
-/// to hold a properly serialized Value.
-///
-/// Deserialization pipeline looks as following:
-///
-///     &[u8] -> Vec<Vec<u8>> -> Vec<Value>
 pub fn deserialize_arguments(bytes: &[u8]) -> Result<Vec<Value>, Error> {
     if bytes.is_empty() {
         return Ok(Vec::new());
     }
-
-    // Slice -> Vec<Vec<u8>>
-    let vec_of_value_bytes: Vec<Vec<u8>> = bytesrepr::deserialize(bytes)?;
-    // Vec<Vec<u8>> -> Vec<Value>
-    vec_of_value_bytes
-        .into_iter()
-        .map(|value_bytes| bytesrepr::deserialize(&value_bytes))
-        .collect()
+    bytesrepr::deserialize(bytes)
 }
 
 macro_rules! from_try_from_impl {
@@ -427,6 +413,7 @@ impl ToBytes for Vec<Value> {
                 .into_iter()
                 .flatten(),
         );
+        // println!("args {:?} ser {:?}", self, result);
         Ok(result)
     }
 }

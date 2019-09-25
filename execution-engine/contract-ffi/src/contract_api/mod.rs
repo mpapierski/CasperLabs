@@ -440,7 +440,7 @@ where
 {
     let contract_key: Key = c_ptr.into();
     let (key_ptr, key_size, _bytes1) = to_ptr(&contract_key);
-    let (args_ptr, args_size, _bytes2) = ArgsParser::parse(args).map(|args| to_ptr(&args)).unwrap();
+    let (args_ptr, args_size, _bytes2) = ArgsParser::parse(args).map(to_ptr_bytes).unwrap();
     let res_size = unsafe { ext_ffi::call_contract(key_ptr, key_size, args_ptr, args_size) };
     let res_ptr = alloc_bytes(res_size);
     let res_bytes = unsafe {

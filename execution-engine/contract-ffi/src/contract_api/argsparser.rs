@@ -8,13 +8,13 @@ use core::convert::TryInto;
 /// It means that each type of the tuple have to implement `ToBytes`.
 /// Implemented for tuples of various sizes.
 pub trait ArgsParser {
-    /// `parse` returns `Vec<Vec<u8>>` because we want to be able to
+    /// `parse` returns `Vec<u8>` because we want to be able to
     /// discriminate between elements of the tuple and retain the order.
-    fn parse(&self) -> Result<Vec<Vec<u8>>, Error>;
+    fn parse(&self) -> Result<Vec<u8>, Error>;
 }
 
 impl ArgsParser for () {
-    fn parse(&self) -> Result<Vec<Vec<u8>>, Error> {
+    fn parse(&self) -> Result<Vec<u8>, Error> {
         Ok(Vec::new())
     }
 }
@@ -25,13 +25,13 @@ macro_rules! impl_argsparser_tuple {
         where $(<$name as TryInto<Value>>::Error: Into<bytesrepr::Error>,)*
         {
             #[allow(non_snake_case)]
-            fn parse(&self) -> Result<Vec<Vec<u8>>, Error> {
+            fn parse(&self) -> Result<Vec<u8>, Error> {
                 let (ref $($name,)+) = self;
                 // TODO: This has to take ownership of $name by cloning it as &T to &Value
                 // conversion is not possible. Changing the arguments of &self to self could
                 // solve problem of excess clones but requires a lot of public API changes.
-                let values: &[Value] = &[$($name.clone().try_into().map_err(Into::into)?,)+];
-                values.into_iter().map(ToBytes::to_bytes).collect()
+                let values : Vec<Value> = vec![$($name.clone().try_into().map_err(Into::into)?,)+];
+                Ok(values.to_bytes()?)
             }
         }
     );

@@ -71,7 +71,6 @@ impl DeployBuilder {
         let wasm_bytes = read_wasm_file_bytes(file_name);
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut payment = DeployCode::new();
         payment.set_code(wasm_bytes);
@@ -88,7 +87,6 @@ impl DeployBuilder {
         let wasm_bytes = read_wasm_file_bytes(file_name);
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut session = DeployCode::new();
         session.set_code(wasm_bytes);

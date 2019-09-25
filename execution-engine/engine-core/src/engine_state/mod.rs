@@ -258,7 +258,6 @@ where
                     .collect();
                 let args = (mint_reference, bonded_validators);
                 ArgsParser::parse(&args)
-                    .and_then(|args| args.to_bytes())
                     .expect("args should parse")
             };
             let mut key_lookup = {
@@ -369,7 +368,6 @@ where
                     let motes = account.balance().value();
                     let args = (MINT_METHOD_NAME, motes);
                     ArgsParser::parse(&args)
-                        .and_then(|args| args.to_bytes())
                         .expect("args should parse")
                 };
                 let tracking_copy_exec = Rc::clone(&tracking_copy);
@@ -1027,7 +1025,6 @@ where
                 let account = PublicKey::new(account_addr);
                 let args = ("finalize_payment", finalize_cost_motes.value(), account);
                 ArgsParser::parse(&args)
-                    .and_then(|args| args.to_bytes())
                     .expect("args should parse")
             };
 

@@ -54,7 +54,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
@@ -72,7 +71,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
@@ -90,7 +88,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
@@ -109,7 +106,6 @@ impl DeployBuilder {
         let wasm_bytes = read_wasm_file_bytes(file_name);
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_args(args);
@@ -127,7 +123,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
@@ -145,7 +140,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
@@ -163,7 +157,6 @@ impl DeployBuilder {
     ) -> Self {
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
@@ -182,7 +175,6 @@ impl DeployBuilder {
         let wasm_bytes = read_wasm_file_bytes(file_name);
         let args = args
             .parse()
-            .and_then(|args_bytes| contract_ffi::bytesrepr::ToBytes::to_bytes(&args_bytes))
             .expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_code(wasm_bytes);

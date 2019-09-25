@@ -717,7 +717,7 @@ where
     fn mint_create(&mut self, mint_contract_key: Key) -> Result<PurseId, Error> {
         let args_bytes = {
             let args = ("create",);
-            ArgsParser::parse(&args).and_then(|args| args.to_bytes())?
+            ArgsParser::parse(&args)?
         };
 
         self.call_contract(mint_contract_key, args_bytes)?;
@@ -751,7 +751,7 @@ where
 
         let args_bytes = {
             let args = ("transfer", source_value, target_value, amount);
-            ArgsParser::parse(&args).and_then(|args| args.to_bytes())?
+            ArgsParser::parse(&args)?
         };
 
         self.call_contract(mint_contract_key, args_bytes)?;

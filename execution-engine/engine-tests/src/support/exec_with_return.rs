@@ -4,7 +4,7 @@ use contract_ffi::key::Key;
 use contract_ffi::uref::URef;
 use contract_ffi::value::account::BlockTime;
 use contract_ffi::value::ProtocolVersion;
-use contract_ffi::value::Value;
+use contract_ffi::value::{self, Value};
 use engine_core::engine_state::executable_deploy_item::ExecutableDeployItem;
 use engine_core::engine_state::execution_effect::ExecutionEffect;
 use engine_core::engine_state::EngineState;
@@ -66,7 +66,7 @@ where
     let gas_limit = Gas::from_u64(std::u64::MAX);
     let protocol_version = ProtocolVersion::new(INIT_PROTOCOL_VERSION);
     let correlation_id = CorrelationId::new();
-    let arguments: Vec<Vec<u8>> = args.parse().expect("should be able to serialize args");
+    let arguments = args.parse().expect("should be able to serialize args");
 
     let base_key = Key::Account(address);
     let account = builder.get_account(base_key).expect("should find account");
@@ -82,12 +82,7 @@ where
         from_account
     };
 
-    let arg_values: Vec<Value> = arguments
-        .into_iter()
-        .map(|value_bytes| {
-            contract_ffi::bytesrepr::deserialize(&value_bytes).expect("should deserialize")
-        })
-        .collect();
+    let arg_values = value::deserialize_arguments(&arguments).expect("should deserialize");
 
     let validated_args = arg_values
         .into_iter()
