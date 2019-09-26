@@ -5,7 +5,7 @@ extern crate contract_ffi;
 use contract_ffi::contract_api::pointers::ContractPointer;
 use contract_ffi::contract_api::{self, Error as ApiError, PurseTransferResult};
 use contract_ffi::value::account::PurseId;
-use contract_ffi::value::{Value, U512};
+use contract_ffi::value::U512;
 
 #[repr(u16)]
 enum Error {
