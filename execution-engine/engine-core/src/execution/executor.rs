@@ -374,7 +374,7 @@ impl Executor<Module> for WasmiExecutor {
             Err(error) => error,
             Ok(_) => {
                 // This duplicates the behavior of sub_call, but is admittedly rather questionable.
-                return Ok(runtime.result().as_ref().cloned().unwrap_or(Value::Unit));
+                return Ok(runtime.result().to_owned());
             }
         };
 
@@ -382,7 +382,7 @@ impl Executor<Module> for WasmiExecutor {
             .as_host_error()
             .and_then(|host_error| host_error.downcast_ref::<Error>())
         {
-            Some(Error::Ret(_)) => runtime.result().as_ref().cloned().unwrap_or(Value::Unit),
+            Some(Error::Ret(_)) => runtime.result().to_owned(),
             Some(Error::Revert(code)) => return Err(Error::Revert(*code)),
             _ => return Err(Error::Interpreter(return_error)),
         };

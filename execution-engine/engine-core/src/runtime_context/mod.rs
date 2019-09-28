@@ -15,7 +15,7 @@ use contract_ffi::value::account::{
     Account, ActionType, AddKeyFailure, BlockTime, PublicKey, RemoveKeyFailure,
     SetThresholdFailure, UpdateKeyFailure, Weight,
 };
-use contract_ffi::value::{Contract, ProtocolVersion, Value};
+use contract_ffi::value::{Contract, ProtocolVersion, TypeMismatch, Value};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::{CorrelationId, Validated};
 use engine_storage::global_state::StateReader;
@@ -169,7 +169,7 @@ where
                         .ok_or_else(|| Error::KeyNotFound(contract_uref))?;
 
                     value.try_into().map_err(|found| {
-                        Error::TypeMismatch(engine_shared::transform::TypeMismatch {
+                        Error::TypeMismatch(TypeMismatch {
                             expected: "Contract".to_owned(),
                             found,
                         })

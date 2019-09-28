@@ -8,10 +8,10 @@ use std::time::Instant;
 
 use contract_ffi::key::Key;
 use contract_ffi::value::account::PublicKey;
-use contract_ffi::value::{ProtocolVersion, Value, U512};
+use contract_ffi::value::{self, ProtocolVersion, TypeMismatch, Value, U512};
 use engine_shared::logging::{log_duration, log_metric, GAUGE};
 use engine_shared::newtypes::{Blake2bHash, CorrelationId};
-use engine_shared::transform::{self, Transform, TypeMismatch};
+use engine_shared::transform::Transform;
 
 use crate::protocol_data::ProtocolData;
 use crate::transaction_source::{Transaction, TransactionSource};
@@ -66,12 +66,10 @@ impl fmt::Display for CommitResult {
     }
 }
 
-impl From<transform::Error> for CommitResult {
-    fn from(error: transform::Error) -> Self {
+impl From<value::Error> for CommitResult {
+    fn from(error: value::Error) -> Self {
         match error {
-            transform::Error::TypeMismatch(type_mismatch) => {
-                CommitResult::TypeMismatch(type_mismatch)
-            }
+            value::Error::TypeMismatch(type_mismatch) => CommitResult::TypeMismatch(type_mismatch),
         }
     }
 }

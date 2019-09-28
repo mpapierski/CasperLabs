@@ -10,7 +10,7 @@ use contract_ffi::value::account::{
     AccountActivity, ActionThresholds, AssociatedKeys, BlockTime, PublicKey, PurseId, Weight,
     KEY_SIZE,
 };
-use contract_ffi::value::{ProtocolVersion, U512};
+use contract_ffi::value::{self, ProtocolVersion, TypeMismatch, U512};
 use engine_core::engine_state::error::{Error as EngineError, RootNotFound};
 use engine_core::engine_state::executable_deploy_item::ExecutableDeployItem;
 use engine_core::engine_state::execution_effect::ExecutionEffect;
@@ -20,7 +20,7 @@ use engine_core::engine_state::op::Op;
 use engine_core::execution::Error as ExecutionError;
 use engine_core::tracking_copy::utils;
 use engine_shared::motes::Motes;
-use engine_shared::transform::{self, TypeMismatch};
+use engine_shared::transform;
 use engine_wasm_prep::wasm_costs::WasmCosts;
 
 use crate::engine_server::ipc::{ChainSpec_CostTable, ChainSpec_GenesisAccount};
@@ -449,9 +449,10 @@ impl From<transform::Transform> for super::transforms::Transform {
                 add.set_value(protobuf::RepeatedField::from_vec(keys));
                 t.set_add_keys(add);
             }
-            transform::Transform::Failure(transform::Error::TypeMismatch(
-                transform::TypeMismatch { expected, found },
-            )) => {
+            transform::Transform::Failure(value::Error::TypeMismatch(TypeMismatch {
+                expected,
+                found,
+            })) => {
                 let mut fail = super::transforms::TransformFailure::new();
                 let mut typemismatch_err = super::transforms::TypeMismatch::new();
                 typemismatch_err.set_expected(expected.to_owned());

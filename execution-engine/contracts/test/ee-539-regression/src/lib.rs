@@ -26,7 +26,8 @@ impl From<Error> for ApiError {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    add_associated_key(PublicKey::new([123; 32]), Weight::new(254)).unwrap_or_else(|_| revert(ApiError::from(Error::AddAssociatedKey).into()));
+    add_associated_key(PublicKey::new([123; 32]), Weight::new(254))
+        .unwrap_or_else(|_| revert(ApiError::from(Error::AddAssociatedKey).into()));
     let key_management_threshold: Weight = match get_arg(0) {
         Some(Ok(data)) => data,
         Some(Err(_)) => revert(ApiError::InvalidArgument.into()),

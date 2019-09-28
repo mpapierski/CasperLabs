@@ -46,8 +46,8 @@ fn bootstrap(accounts: &[PublicKey]) -> (WasmTestResult<LmdbGlobalState>, TempDi
             "create_accounts.wasm",
             // TODO(mpapierski): Identify additional Value variants
             (accounts_bytes, amount), //args
-            DEFAULT_BLOCK_TIME,                                          // blocktime
-            [1; 32],                                                     // deploy_hash
+            DEFAULT_BLOCK_TIME,       // blocktime
+            [1; 32],                  // deploy_hash
         )
         .expect_success()
         .commit()

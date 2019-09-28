@@ -18,14 +18,14 @@ use contract_ffi::bytesrepr::ToBytes;
 use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::execution::Phase;
 use contract_ffi::key::{Key, HASH_SIZE};
+use contract_ffi::uref::URef;
 use contract_ffi::uref::{AccessRights, UREF_ADDR_SIZE};
-use contract_ffi::uref::{TryFromValueForURefError, URef};
 use contract_ffi::value::account::{BlockTime, PublicKey, PurseId};
-use contract_ffi::value::{Account, ProtocolVersion, Value, U512};
+use contract_ffi::value::{Account, ProtocolVersion, TypeMismatch, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::motes::Motes;
 use engine_shared::newtypes::{Blake2bHash, CorrelationId, Validated};
-use engine_shared::transform::{Transform, TypeMismatch};
+use engine_shared::transform::Transform;
 use engine_storage::global_state::{CommitResult, StateProvider, StateReader};
 use engine_storage::protocol_data::ProtocolData;
 use engine_wasm_prep::wasm_costs::WasmCosts;
@@ -234,12 +234,9 @@ where
                 tracking_copy,
                 phase,
             )?;
-            result.try_into().map_err(|e: TryFromValueForURefError| {
-                Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
-                    "URef".to_string(),
-                    e.type_name(),
-                )))
-            })?
+            result
+                .try_into()
+                .map_err(|type_mismatch| Error::ExecError(execution::Error::from(type_mismatch)))?
         };
 
         // Spec #7: Execute pos installer wasm code, passing the initially bonded validators as an
@@ -257,8 +254,7 @@ where
                     .map(|(k, v)| (k, v.value()))
                     .collect();
                 let args = (mint_reference, bonded_validators);
-                ArgsParser::parse(&args)
-                    .expect("args should parse")
+                ArgsParser::parse(&args).expect("args should parse")
             };
             let mut key_lookup = {
                 let mut ret = BTreeMap::new();
@@ -286,12 +282,9 @@ where
                 tracking_copy,
                 phase,
             )?;
-            result.try_into().map_err(|e: TryFromValueForURefError| {
-                Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
-                    "URef".to_string(),
-                    e.type_name(),
-                )))
-            })?
+            result
+                .try_into()
+                .map_err(|type_mismatch| Error::ExecError(execution::Error::from(type_mismatch)))?
         };
 
         // Spec #2: Associate given CostTable with given ProtocolVersion.
@@ -367,8 +360,7 @@ where
                 let args = {
                     let motes = account.balance().value();
                     let args = (MINT_METHOD_NAME, motes);
-                    ArgsParser::parse(&args)
-                        .expect("args should parse")
+                    ArgsParser::parse(&args).expect("args should parse")
                 };
                 let tracking_copy_exec = Rc::clone(&tracking_copy);
                 let tracking_copy_write = Rc::clone(&tracking_copy);
@@ -400,11 +392,8 @@ where
                     phase,
                 )?;
 
-                let mint_result = result.try_into().map_err(|e: TryFromValueForURefError| {
-                    Error::ExecError(execution::Error::TypeMismatch(TypeMismatch::new(
-                        "URef".to_string(),
-                        e.type_name(),
-                    )))
+                let mint_result = result.try_into().map_err(|type_mismatch| {
+                    Error::ExecError(execution::Error::from(type_mismatch))
                 });
 
                 // ...and write that account to global state...
@@ -605,10 +594,7 @@ where
                         }
                         Some(key) => {
                             return Err(error::Error::ExecError(execution::Error::TypeMismatch(
-                                engine_shared::transform::TypeMismatch::new(
-                                    "Key::URef".to_string(),
-                                    key.type_string(),
-                                ),
+                                TypeMismatch::new("Key::URef".to_string(), key.type_string()),
                             )));
                         }
                         None => {

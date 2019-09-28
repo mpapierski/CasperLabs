@@ -31,10 +31,8 @@ pub extern "C" fn call() {
     assert!(&result == "Success!");
 
     // TODO(mpapierski): Identify new Value variants
-    let new_amount1: Option<U512> =
-        contract_api::call_contract(mint.clone(), &("balance", purse1));
-    let new_amount2: Option<U512> =
-        contract_api::call_contract(mint.clone(), &("balance", purse2));
+    let new_amount1: Option<U512> = contract_api::call_contract(mint.clone(), &("balance", purse1));
+    let new_amount2: Option<U512> = contract_api::call_contract(mint.clone(), &("balance", purse2));
 
     assert!(new_amount1.unwrap() == U512::from(30));
     assert!(new_amount2.unwrap() == U512::from(370));

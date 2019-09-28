@@ -14,10 +14,7 @@ fn bond(pos: ContractPointer, amount: U512, source: PurseId) {
 }
 
 fn unbond(pos: ContractPointer, amount: Option<U512>) {
-    contract_api::call_contract::<_, ()>(
-        pos,
-        &(POS_UNBOND, amount),
-    );
+    contract_api::call_contract::<_, ()>(pos, &(POS_UNBOND, amount));
 }
 
 #[no_mangle]

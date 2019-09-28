@@ -379,10 +379,7 @@ fn should_run_successful_bond_and_unbond() {
             STANDARD_PAYMENT_CONTRACT,
             (*DEFAULT_PAYMENT,),
             "pos_bonding.wasm",
-            (
-                String::from(TEST_UNBOND),
-                None as Option<U512>,
-            ), // <-- va banque
+            (String::from(TEST_UNBOND), None as Option<U512>), // <-- va banque
             DEFAULT_BLOCK_TIME,
             [4; 32],
         )

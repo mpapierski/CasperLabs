@@ -141,9 +141,7 @@ where
                 match downcasted_error {
                     execution::Error::Ret(urefs) => {
                         let effect = runtime.context().effect();
-                        let value: Value =
-                            runtime.result().as_ref().cloned().unwrap_or(Value::Unit);
-                        Some((value, urefs.clone(), effect))
+                        Some((runtime.result().to_owned(), urefs.clone(), effect))
                     }
 
                     _ => None,

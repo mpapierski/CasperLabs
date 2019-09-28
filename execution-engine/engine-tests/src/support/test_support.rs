@@ -69,9 +69,7 @@ impl DeployBuilder {
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut payment = DeployCode::new();
         payment.set_code(wasm_bytes);
         payment.set_args(args);
@@ -85,9 +83,7 @@ impl DeployBuilder {
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut session = DeployCode::new();
         session.set_code(wasm_bytes);
         session.set_args(args);

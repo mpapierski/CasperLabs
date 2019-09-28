@@ -52,9 +52,7 @@ impl DeployBuilder {
         hash: Vec<u8>,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
         item.set_hash(hash);
@@ -69,9 +67,7 @@ impl DeployBuilder {
         uref: URef,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
         item.set_uref(uref.addr().to_vec());
@@ -86,9 +82,7 @@ impl DeployBuilder {
         uref_name: &str,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
         item.set_stored_contract_name(uref_name.to_owned()); // <-- named uref
@@ -104,9 +98,7 @@ impl DeployBuilder {
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_args(args);
         deploy_code.set_code(wasm_bytes);
@@ -121,9 +113,7 @@ impl DeployBuilder {
         hash: Vec<u8>,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
         item.set_hash(hash);
@@ -138,9 +128,7 @@ impl DeployBuilder {
         uref: URef,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
         item.set_uref(uref.addr().to_vec());
@@ -155,9 +143,7 @@ impl DeployBuilder {
         uref_name: &str,
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
         item.set_stored_contract_name(uref_name.to_owned()); // <-- named uref
@@ -173,9 +159,7 @@ impl DeployBuilder {
         args: impl contract_ffi::contract_api::argsparser::ArgsParser,
     ) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_code(wasm_bytes);
         deploy_code.set_args(args);

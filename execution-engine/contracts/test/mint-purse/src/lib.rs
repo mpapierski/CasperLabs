@@ -29,8 +29,7 @@ pub extern "C" fn call() {
     let mint = contract_api::get_mint();
 
     // TODO(mpapierski): Identify additional Value variants
-    let balance: Option<U512> =
-        contract_api::call_contract(mint, &("balance", new_purse));
+    let balance: Option<U512> = contract_api::call_contract(mint, &("balance", new_purse));
 
     match balance {
         None => contract_api::revert(ApiError::User(Error::BalanceNotFound as u16).into()),

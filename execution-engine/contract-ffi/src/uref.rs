@@ -1,14 +1,14 @@
 use bitflags;
 use core::convert::TryFrom;
 
-use crate::alloc::string::String;
+use crate::alloc::string::{String, ToString};
 use crate::alloc::vec::Vec;
 use crate::base16;
 use crate::bytesrepr;
 use crate::bytesrepr::{OPTION_SIZE, U32_SIZE};
 use crate::contract_api::pointers::TURef;
 use crate::key::Key;
-use crate::value::Value;
+use crate::value::{TypeMismatch, Value};
 
 pub const UREF_ADDR_SIZE: usize = 32;
 pub const ACCESS_RIGHTS_SIZE: usize = 1;
@@ -227,30 +227,13 @@ impl<T> From<TURef<T>> for URef {
     }
 }
 
-#[derive(Debug)]
-pub struct TryFromValueForURefError {
-    type_name: String,
-}
-
-impl TryFromValueForURefError {
-    pub fn new<T: Into<String>>(type_name: T) -> TryFromValueForURefError {
-        TryFromValueForURefError {
-            type_name: type_name.into(),
-        }
-    }
-
-    pub fn type_name(self) -> String {
-        self.type_name
-    }
-}
-
 impl TryFrom<Value> for URef {
-    type Error = TryFromValueForURefError;
+    type Error = TypeMismatch;
 
     fn try_from(value: Value) -> Result<URef, Self::Error> {
         match value {
             Value::Key(Key::URef(uref)) => Ok(uref),
-            _ => Err(TryFromValueForURefError::new(value.type_string())),
+            _ => Err(TypeMismatch::new("URef".to_string(), value.type_string())),
         }
     }
 }

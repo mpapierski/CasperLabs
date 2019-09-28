@@ -22,11 +22,5 @@ pub extern "C" fn call() {
         None => contract_api::revert(Error::MissingArgument.into()),
     };
 
-    contract_api::call_contract(
-        pos_pointer,
-        &(
-            UNBOND_METHOD_NAME,
-            unbond_amount,
-        ),
-    )
+    contract_api::call_contract(pos_pointer, &(UNBOND_METHOD_NAME, unbond_amount))
 }

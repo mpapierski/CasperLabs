@@ -74,7 +74,7 @@ fn finalize_payment_should_not_be_run_by_non_system_accounts() {
             STANDARD_PAYMENT_CONTRACT,
             (*DEFAULT_PAYMENT,),
             FINALIZE_PAYMENT,
-            args.clone(),
+            args,
             DEFAULT_BLOCK_TIME,
             [3; 32],
         )

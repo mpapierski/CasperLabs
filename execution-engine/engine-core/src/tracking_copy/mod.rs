@@ -11,9 +11,9 @@ use linked_hash_map::LinkedHashMap;
 use parking_lot::Mutex;
 
 use contract_ffi::key::Key;
-use contract_ffi::value::Value;
+use contract_ffi::value::{self, TypeMismatch, Value};
 use engine_shared::newtypes::{CorrelationId, Validated};
-use engine_shared::transform::{self, Transform, TypeMismatch};
+use engine_shared::transform::Transform;
 use engine_storage::global_state::StateReader;
 
 use crate::engine_state::execution_effect::ExecutionEffect;
@@ -213,7 +213,7 @@ impl<R: StateReader<Key, Value>> TrackingCopy<R> {
                         utils::add(&mut self.fns, k, t);
                         Ok(AddResult::Success)
                     }
-                    Err(transform::Error::TypeMismatch(type_mismatch)) => {
+                    Err(value::Error::TypeMismatch(type_mismatch)) => {
                         Ok(AddResult::TypeMismatch(type_mismatch))
                     }
                 }

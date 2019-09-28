@@ -14,12 +14,11 @@ use contract_ffi::contract_api::argsparser::ArgsParser;
 use contract_ffi::contract_api::{PurseTransferResult, TransferResult};
 use contract_ffi::key::Key;
 use contract_ffi::system_contracts::{self, mint};
-use contract_ffi::uref::{AccessRights, TryFromValueForURefError, URef};
+use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{ActionType, PublicKey, PurseId, Weight, PUBLIC_KEY_SIZE};
 use contract_ffi::value::{self, Account, ProtocolVersion, Value, U512};
 use engine_shared::gas::Gas;
 use engine_shared::newtypes::Validated;
-use engine_shared::transform::TypeMismatch;
 use engine_storage::global_state::StateReader;
 
 use super::{Error, MINT_NAME, POS_NAME};
@@ -32,7 +31,7 @@ use crate::Address;
 pub struct Runtime<'a, R> {
     memory: MemoryRef,
     module: Module,
-    result: Option<Value>,
+    result: Value,
     host_buf: Vec<u8>,
     context: RuntimeContext<'a, R>,
 }
@@ -139,8 +138,7 @@ where
     // Extract passed urefs from all of the arguments
     let extracted_urefs: Vec<Key> = args
         .iter()
-        .map(|validated_value| validated_value.extract_urefs())
-        .flatten()
+        .flat_map(|validated_value| validated_value.extract_urefs())
         .map(Key::URef)
         .collect();
 
@@ -150,7 +148,7 @@ where
     let mut runtime = Runtime {
         memory,
         module: parity_module,
-        result: None,
+        result: Value::Unit,
         host_buf: Vec::new(),
         context: RuntimeContext::new(
             current_runtime.context.state(),
@@ -175,7 +173,7 @@ where
     let result = instance.invoke_export("call", &[], &mut runtime);
 
     match result {
-        Ok(_) => Ok(runtime.result.unwrap_or(Value::Unit)),
+        Ok(_) => Ok(runtime.result),
         Err(e) => {
             if let Some(host_error) = e.as_host_error() {
                 // If the "error" was in fact a trap caused by calling `ret` then
@@ -188,7 +186,7 @@ where
                         let ret_urefs_map =
                             extract_access_rights_from_urefs(ret_urefs.iter().cloned());
                         current_runtime.context.add_urefs(ret_urefs_map);
-                        return Ok(runtime.result.unwrap_or(Value::Unit));
+                        return Ok(runtime.result);
                     }
                     Error::Revert(status) => {
                         // Propagate revert as revert, instead of passing it as
@@ -212,13 +210,13 @@ where
         Runtime {
             memory,
             module,
-            result: None,
+            result: Value::Unit,
             host_buf: Vec::new(),
             context,
         }
     }
 
-    pub fn result(&self) -> &Option<Value> {
+    pub fn result(&self) -> &Value {
         &self.result
     }
 
@@ -427,7 +425,7 @@ where
                 // Set the result field in the runtime and return
                 // the proper element of the `Error` enum indicating
                 // that the reason for exiting the module was a call to ret.
-                self.result = Some(value);
+                self.result = value;
 
                 Error::Ret(extracted_urefs).into()
             }
@@ -723,12 +721,7 @@ where
         self.call_contract(mint_contract_key, args_bytes)?;
 
         let result_value: Value = deserialize(&self.host_buf)?;
-        let result: URef = result_value
-            .try_into()
-            .map_err(|e: TryFromValueForURefError| {
-                Error::TypeMismatch(TypeMismatch::new("URef".to_string(), e.type_name()))
-            })?;
-
+        let result: URef = result_value.try_into().map_err(Error::TypeMismatch)?;
         Ok(PurseId::new(result))
     }
 

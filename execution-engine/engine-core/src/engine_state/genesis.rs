@@ -6,9 +6,9 @@ use contract_ffi::key::Key;
 
 use contract_ffi::value::account::PublicKey;
 use contract_ffi::value::ProtocolVersion;
+use contract_ffi::value::TypeMismatch;
 use engine_shared::motes::Motes;
 use engine_shared::newtypes::Blake2bHash;
-use engine_shared::transform::TypeMismatch;
 use engine_storage::global_state::CommitResult;
 use engine_wasm_prep::wasm_costs::WasmCosts;
 

@@ -10,7 +10,7 @@ use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{
     AddKeyFailure, RemoveKeyFailure, SetThresholdFailure, UpdateKeyFailure,
 };
-use engine_shared::transform::TypeMismatch;
+use contract_ffi::value::TypeMismatch;
 
 use crate::resolvers::error::ResolverError;
 
@@ -116,5 +116,11 @@ impl From<SetThresholdFailure> for Error {
 impl From<system_contracts::error::Error> for Error {
     fn from(error: system_contracts::error::Error) -> Error {
         Error::SystemContractError(error)
+    }
+}
+
+impl From<TypeMismatch> for Error {
+    fn from(error: TypeMismatch) -> Error {
+        Error::TypeMismatch(error)
     }
 }
