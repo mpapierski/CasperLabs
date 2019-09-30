@@ -69,7 +69,8 @@ where
     let arguments = args.parse().expect("should be able to serialize args");
 
     let base_key = Key::Account(address);
-    let account = builder.get_account(base_key).expect("should find account");
+
+    let account = builder.get_account(address).expect("should find account");
 
     let mut uref_lookup = account.urefs_lookup().clone();
     let known_urefs = {
