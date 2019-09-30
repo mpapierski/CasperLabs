@@ -279,14 +279,14 @@ impl Value {
     /// This method consumes given instance of Value and returns a vector of URefs that can be found
     /// in currently held variant of Value
     pub fn extract_urefs(&self) -> Vec<URef> {
-        // NOTE: This implementation currently assumes that regardless of the variant only single
-        // URef can be found
         let mut urefs: Vec<URef> = Vec::new();
         match *self {
             Value::NamedKey(_, Key::URef(uref)) | Value::Key(Key::URef(uref)) => urefs.push(uref),
             Value::Account(ref account) => {
                 // Extracts all known urefs from account's urefs
-                urefs.extend(account.urefs_lookup().values().filter_map(Key::as_uref))
+                urefs.extend(account.urefs_lookup().values().filter_map(Key::as_uref));
+                // Account has a purse which is an URef too
+                urefs.push(account.purse_id().value());
             }
             Value::Contract(ref contract) => {
                 // Extracts all known urefs from contract's urefs
@@ -508,7 +508,17 @@ mod tests {
             Default::default(),
         );
         let value = Value::Account(account);
-        assert_eq!(value.extract_urefs(), vec![foo_uref, bar_uref])
+
+        let actual = {
+            let mut urefs = value.extract_urefs();
+            urefs.sort();
+            urefs
+        };
+
+        assert!(purse_uref < foo_uref);
+        assert!(foo_uref < bar_uref);
+
+        assert_eq!(actual, vec![purse_uref, foo_uref, bar_uref])
     }
 
     #[test]
