@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -55,11 +54,8 @@ pub extern "C" fn call() {
 
     match method_name.as_str() {
         METHOD_VERSION => {
-            let version: String = contract_api::call_contract(
-                purse_holder_contract_pointer.clone(),
-                &(method_name,),
-                &vec![],
-            );
+            let version: String =
+                contract_api::call_contract(purse_holder_contract_pointer.clone(), &(method_name,));
             let version_key = contract_api::new_turef(version).into();
             contract_api::add_uref(METHOD_VERSION, &version_key);
         }
@@ -77,7 +73,6 @@ pub extern "C" fn call() {
             contract_api::call_contract::<_, ()>(
                 purse_holder_contract_pointer.clone(),
                 &(method_name, purse_name),
-                &vec![],
             );
         }
     };

@@ -1,7 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate alloc;
 extern crate contract_ffi;
 
 use contract_ffi::contract_api::pointers::{ContractPointer, TURef};
@@ -34,5 +32,5 @@ pub extern "C" fn call() {
     ));
 
     // call do_nothing_stored
-    contract_api::call_contract::<_, ()>(local_state_contract_pointer.clone(), &(), &vec![]);
+    contract_api::call_contract::<_, ()>(local_state_contract_pointer.clone(), &());
 }

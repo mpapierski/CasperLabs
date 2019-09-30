@@ -1,6 +1,5 @@
 #![no_std]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -38,5 +37,5 @@ pub extern "C" fn call() {
             ),
         };
 
-    contract_api::call_contract::<_, ()>(do_nothing.clone(), &(new_purse_name.clone(),), &vec![]);
+    contract_api::call_contract::<_, ()>(do_nothing.clone(), &(new_purse_name.clone(),));
 }

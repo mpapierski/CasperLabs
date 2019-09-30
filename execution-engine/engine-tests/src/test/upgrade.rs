@@ -1,9 +1,16 @@
-use contract_ffi::value::Value;
+use contract_ffi::value::account::PublicKey;
+use contract_ffi::value::{Value, U512};
 use engine_core::engine_state::EngineConfig;
 use engine_shared::transform::Transform;
 
-use crate::support::test_support::{ExecRequestBuilder, InMemoryWasmTestBuilder};
-use crate::test::{DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG};
+use crate::support::test_support::{DeployBuilder, ExecRequestBuilder, InMemoryWasmTestBuilder};
+use crate::test::{
+    CONTRACT_STANDARD_PAYMENT, DEFAULT_ACCOUNT_ADDR, DEFAULT_GENESIS_CONFIG, DEFAULT_PAYMENT,
+};
+
+lazy_static! {
+    static ref DEFAULT_PAYMENT_EXTENDED: U512 = *DEFAULT_PAYMENT * 2;
+}
 
 const DO_NOTHING_STORED_CONTRACT_NAME: &str = "do_nothing_stored";
 const DO_NOTHING_STORED_CALLER_CONTRACT_NAME: &str = "do_nothing_stored_caller";
@@ -122,7 +129,15 @@ fn should_be_able_to_observe_state_transition_across_upgrade() {
     {
         let exec_request = {
             let contract_name = format!("{}.wasm", PURSE_HOLDER_STORED_CONTRACT_NAME);
-            ExecRequestBuilder::standard(DEFAULT_ACCOUNT_ADDR, &contract_name, ())
+
+            let deploy = DeployBuilder::new()
+                .with_address(DEFAULT_ACCOUNT_ADDR)
+                .with_payment_code(CONTRACT_STANDARD_PAYMENT, (*DEFAULT_PAYMENT_EXTENDED,))
+                .with_session_code(&contract_name, ())
+                .with_authorization_keys(&[PublicKey::new(DEFAULT_ACCOUNT_ADDR)])
+                .with_deploy_hash([1u8; 32])
+                .build();
+            ExecRequestBuilder::new().push_deploy(deploy).build()
         };
 
         builder
@@ -215,7 +230,14 @@ fn should_support_extending_functionality() {
     {
         let exec_request = {
             let contract_name = format!("{}.wasm", PURSE_HOLDER_STORED_CONTRACT_NAME);
-            ExecRequestBuilder::standard(DEFAULT_ACCOUNT_ADDR, &contract_name, ())
+            let deploy = DeployBuilder::new()
+                .with_address(DEFAULT_ACCOUNT_ADDR)
+                .with_payment_code(CONTRACT_STANDARD_PAYMENT, (*DEFAULT_PAYMENT_EXTENDED,))
+                .with_session_code(&contract_name, ())
+                .with_authorization_keys(&[PublicKey::new(DEFAULT_ACCOUNT_ADDR)])
+                .with_deploy_hash([1u8; 32])
+                .build();
+            ExecRequestBuilder::new().push_deploy(deploy).build()
         };
 
         builder
@@ -326,7 +348,14 @@ fn should_maintain_known_urefs_across_upgrade() {
     {
         let exec_request = {
             let contract_name = format!("{}.wasm", PURSE_HOLDER_STORED_CONTRACT_NAME);
-            ExecRequestBuilder::standard(DEFAULT_ACCOUNT_ADDR, &contract_name, ())
+            let deploy = DeployBuilder::new()
+                .with_address(DEFAULT_ACCOUNT_ADDR)
+                .with_payment_code(CONTRACT_STANDARD_PAYMENT, (*DEFAULT_PAYMENT_EXTENDED,))
+                .with_session_code(&contract_name, ())
+                .with_authorization_keys(&[PublicKey::new(DEFAULT_ACCOUNT_ADDR)])
+                .with_deploy_hash([1u8; 32])
+                .build();
+            ExecRequestBuilder::new().push_deploy(deploy).build()
         };
 
         builder

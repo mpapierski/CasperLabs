@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use contract_ffi::key::Key;
 use contract_ffi::uref::{AccessRights, URef};
 use contract_ffi::value::account::{PublicKey, PurseId};
@@ -7,7 +5,7 @@ use contract_ffi::value::Value;
 use contract_ffi::value::U512;
 use engine_core::engine_state::MAX_PAYMENT;
 use engine_shared::transform::Transform;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 
 use crate::support::exec_with_return;

@@ -51,10 +51,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_payment_hash(mut self, hash: Vec<u8>, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .and_then(|args_bytes| ToBytes::to_bytes(&args_bytes))
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
         item.set_hash(hash);
@@ -65,9 +62,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_payment_uref(mut self, uref: URef, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
         item.set_uref(uref.addr().to_vec());
@@ -78,9 +73,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_payment_named_key(mut self, uref_name: &str, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
         item.set_stored_contract_name(uref_name.to_owned()); // <-- named uref
@@ -92,9 +85,7 @@ impl DeployBuilder {
 
     pub fn with_payment_code(mut self, file_name: &str, args: impl ArgsParser) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_args(args);
         deploy_code.set_code(wasm_bytes);
@@ -105,10 +96,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_session_hash(mut self, hash: Vec<u8>, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .and_then(|args_bytes| ToBytes::to_bytes(&args_bytes))
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractHash = StoredContractHash::new();
         item.set_args(args);
         item.set_hash(hash);
@@ -119,10 +107,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_session_uref(mut self, uref: URef, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .and_then(|args_bytes| ToBytes::to_bytes(&args_bytes))
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item: StoredContractURef = StoredContractURef::new();
         item.set_args(args);
         item.set_uref(uref.addr().to_vec());
@@ -133,10 +118,7 @@ impl DeployBuilder {
     }
 
     pub fn with_stored_session_named_key(mut self, uref_name: &str, args: impl ArgsParser) -> Self {
-        let args = args
-            .parse()
-            .and_then(|args_bytes| ToBytes::to_bytes(&args_bytes))
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut item = StoredContractName::new();
         item.set_args(args);
         item.set_stored_contract_name(uref_name.to_owned()); // <-- named uref
@@ -148,9 +130,7 @@ impl DeployBuilder {
 
     pub fn with_session_code(mut self, file_name: &str, args: impl ArgsParser) -> Self {
         let wasm_bytes = read_wasm_file_bytes(file_name);
-        let args = args
-            .parse()
-            .expect("should serialize args");
+        let args = args.parse().expect("should serialize args");
         let mut deploy_code = DeployCode::new();
         deploy_code.set_code(wasm_bytes);
         deploy_code.set_args(args);

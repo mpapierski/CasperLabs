@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(cell_update)]
 
-#[macro_use]
 extern crate alloc;
 extern crate contract_ffi;
 
@@ -59,7 +58,7 @@ pub extern "C" fn apply_method() {
             let purse_id = contract_api::create_purse();
             contract_api::add_uref(&purse_name, &purse_id.value().into());
         }
-        METHOD_VERSION => contract_api::ret(&VERSION.to_string(), &vec![]),
+        METHOD_VERSION => contract_api::ret(VERSION.to_string()),
         _ => contract_api::revert(Error::User(CustomError::UnknownMethodName as u16).into()),
     }
 }
