@@ -3,13 +3,16 @@ use core::fmt::Debug;
 use core::u8;
 
 use super::error::Error;
-use super::runtime::revert;
+use super::runtime::{self, revert};
 use super::{alloc_bytes, to_ptr, ContractRef, TURef};
 use crate::bytesrepr::deserialize;
 use crate::contract_api::error::result_from;
 use crate::ext_ffi;
+use crate::key::Key;
+use crate::system_contracts::mint;
 use crate::system_contracts::SystemContract;
 use crate::unwrap_or_revert::UnwrapOrRevert;
+use crate::uref::URef;
 use crate::uref::UREF_SIZE_SERIALIZED;
 use crate::value::account::{PublicKey, PurseId, PURSE_ID_SIZE_SERIALIZED};
 use crate::value::U512;
@@ -153,20 +156,19 @@ pub fn transfer_from_purse_to_purse(
     target: PurseId,
     amount: U512,
 ) -> Result<(), Error> {
-    let (source_ptr, source_size, _bytes) = to_ptr(&source);
-    let (target_ptr, target_size, _bytes) = to_ptr(&target);
-    let (amount_ptr, amount_size, _bytes) = to_ptr(&amount);
-    let result = unsafe {
-        ext_ffi::transfer_from_purse_to_purse(
-            source_ptr,
-            source_size,
-            target_ptr,
-            target_size,
-            amount_ptr,
-            amount_size,
-        )
-    };
-    if result == 0 {
+    let mint_contract_ref = get_mint();
+
+    let source_value: URef = source.value();
+    let target_value: URef = target.value();
+
+    let args = ("transfer", source_value, target_value, amount);
+
+    let extra_urefs: Vec<Key> = vec![source_value.into(), target_value.into()];
+
+    let mint_result: Result<(), mint::Error> =
+        runtime::call_contract(mint_contract_ref, &args, &extra_urefs);
+
+    if mint_result.is_ok() {
         Ok(())
     } else {
         Err(Error::Transfer)

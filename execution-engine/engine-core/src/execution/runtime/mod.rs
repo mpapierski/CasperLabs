@@ -894,43 +894,6 @@ where
         }
     }
 
-    /// Transfers `amount` of motes from `source` purse to `target` purse.
-    fn transfer_from_purse_to_purse(
-        &mut self,
-        source_ptr: u32,
-        source_size: u32,
-        target_ptr: u32,
-        target_size: u32,
-        amount_ptr: u32,
-        amount_size: u32,
-    ) -> Result<Result<(), ApiError>, Error> {
-        let source: PurseId = {
-            let bytes = self.bytes_from_mem(source_ptr, source_size as usize)?;
-            deserialize(&bytes).map_err(Error::BytesRepr)?
-        };
-
-        let target: PurseId = {
-            let bytes = self.bytes_from_mem(target_ptr, target_size as usize)?;
-            deserialize(&bytes).map_err(Error::BytesRepr)?
-        };
-
-        let amount: U512 = {
-            let bytes = self.bytes_from_mem(amount_ptr, amount_size as usize)?;
-            deserialize(&bytes).map_err(Error::BytesRepr)?
-        };
-
-        let mint_contract_key = self.get_mint_contract_uref().into();
-
-        if self
-            .mint_transfer(mint_contract_key, source, target, amount)
-            .is_ok()
-        {
-            Ok(Ok(()))
-        } else {
-            Ok(Err(ApiError::Transfer))
-        }
-    }
-
     fn get_balance(&mut self, purse_id: PurseId) -> Result<Option<U512>, Error> {
         let seed = self.get_mint_contract_uref().addr();
 

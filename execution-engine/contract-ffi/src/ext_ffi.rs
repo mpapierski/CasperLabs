@@ -74,14 +74,6 @@ extern "C" {
         amount_ptr: *const u8,
         amount_size: usize,
     ) -> i32;
-    pub fn transfer_from_purse_to_purse(
-        source_ptr: *const u8,
-        source_size: usize,
-        target_ptr: *const u8,
-        target_size: usize,
-        amount_ptr: *const u8,
-        amount_size: usize,
-    ) -> i32;
     pub fn get_balance(purse_id_ptr: *const u8, purse_id_size: usize) -> i32;
     pub fn get_phase(dest_ptr: *mut u8);
     pub fn upgrade_contract_at_uref(
