@@ -37,12 +37,11 @@ pub enum FunctionIndex {
     CreatePurseIndex = 30,
     TransferToAccountIndex = 31,
     TransferFromPurseToAccountIndex = 32,
-    TransferFromPurseToPurseIndex = 33,
-    GetBalanceIndex = 34,
-    GetPhaseIndex = 35,
-    UpgradeContractAtURefIndex = 36,
-    GetSystemContractIndex = 37,
-    GetMainPurseIndex = 38,
+    GetBalanceIndex = 33,
+    GetPhaseIndex = 34,
+    UpgradeContractAtURefIndex = 35,
+    GetSystemContractIndex = 36,
+    GetMainPurseIndex = 37,
 }
 
 impl Into<usize> for FunctionIndex {

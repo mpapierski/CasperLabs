@@ -380,26 +380,6 @@ where
                 Ok(Some(RuntimeValue::I32(TransferredTo::i32_from(ret))))
             }
 
-            FunctionIndex::TransferFromPurseToPurseIndex => {
-                // args(0) = pointer to array of bytes in Wasm memory of a source purse
-                // args(1) = length of array of bytes in Wasm memory of a source purse
-                // args(2) = pointer to array of bytes in Wasm memory of a target purse
-                // args(3) = length of array of bytes in Wasm memory of a target purse
-                // args(4) = pointer to array of bytes in Wasm memory of an amount
-                // args(5) = length of array of bytes in Wasm memory of an amount
-                let (source_ptr, source_size, target_ptr, target_size, amount_ptr, amount_size) =
-                    Args::parse(args)?;
-                let ret = self.transfer_from_purse_to_purse(
-                    source_ptr,
-                    source_size,
-                    target_ptr,
-                    target_size,
-                    amount_ptr,
-                    amount_size,
-                )?;
-                Ok(Some(RuntimeValue::I32(contract_api::i32_from(ret))))
-            }
-
             FunctionIndex::GetBalanceIndex => {
                 // args(0) = pointer to purse_id input
                 // args(1) = length of purse_id
