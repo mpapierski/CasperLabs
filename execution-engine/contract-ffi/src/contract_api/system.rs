@@ -9,11 +9,9 @@ use crate::bytesrepr::deserialize;
 use crate::contract_api::error::result_from;
 use crate::ext_ffi;
 use crate::key::Key;
-use crate::system_contracts::mint;
-use crate::system_contracts::SystemContract;
+use crate::system_contracts::{mint, SystemContract};
 use crate::unwrap_or_revert::UnwrapOrRevert;
-use crate::uref::URef;
-use crate::uref::UREF_SIZE_SERIALIZED;
+use crate::uref::{URef, UREF_SIZE_SERIALIZED};
 use crate::value::account::{PublicKey, PurseId, PURSE_ID_SIZE_SERIALIZED};
 use crate::value::U512;
 
@@ -168,9 +166,5 @@ pub fn transfer_from_purse_to_purse(
     let mint_result: Result<(), mint::Error> =
         runtime::call_contract(mint_contract_ref, &args, &extra_urefs);
 
-    if mint_result.is_ok() {
-        Ok(())
-    } else {
-        Err(Error::Transfer)
-    }
+    mint_result.map_err(|_| Error::Transfer)
 }
