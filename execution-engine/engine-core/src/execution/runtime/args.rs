@@ -7,95 +7,91 @@ where
     fn parse(args: RuntimeArgs) -> Result<Self, Trap>;
 }
 
-impl Args for u32 {
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        args.nth_checked(0)
-    }
+/// This macro generates a code to extract nth arguments and create a tuple based on
+/// that.
+///
+/// This idea is inspired by excellent example from https://github.com/dtolnay/case-studies/blob/master/integer-match/README.md
+///
+/// For a given set of tokens {T1, T2, T3, ...} it generates a code that enumerates them, and
+/// constructs a tuple in place:
+///
+/// ```ignore
+/// impl<T1: FromRuntimeValue + Sized, T2: FromRuntimeValue + Sized> Args for (T1, T2) {
+///     fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
+///         #[allow(dead_code)]
+///         mod m {
+///             pub const X: usize = 0;
+///             pub mod m {
+///                 pub const X: usize = super::X + 1;
+///                 pub mod m {
+///                     pub const X: usize = super::X + 1;
+///                 }
+///             }
+///         }
+///         Ok((
+///             args.nth_checked::<T1>(m::X)?,
+///             args.nth_checked::<T2>(m::m::X)?,
+///         ))
+///     }
+/// }
+/// ```
+/// First, it enumerates input tokens creating a nested structure of constants, and then enumerates
+/// it again by constructing a paths, and generating a code for accessing nth values.
+
+macro_rules! impl_args_for_tuple {
+    ($($v:ident),*) => {
+        impl<$($v:FromRuntimeValue + Sized,)*> Args for ($($v,)*) {
+            fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
+                impl_args_for_tuple_helper! {
+                    args
+                    path: (m::X)
+                    def: ()
+                    arms: ()
+                    $($v),*
+                }
+            }
+        }
+    };
 }
 
-impl Args for usize {
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: u32 = args.nth_checked(0)?;
-        Ok(a0 as usize)
-    }
+macro_rules! impl_args_for_tuple_helper {
+    (
+        $args:ident
+        path: ($($path:tt)*)
+        def: ($($def:tt)*)
+        arms: ($(($i:expr, $v:ident))*)
+    ) => {
+        #[allow(dead_code)]
+        mod m {
+            pub const X: usize = 0;
+            $($def)*
+        }
+        Ok((
+            $(
+                $args.nth_checked::<$v>($i)?,
+            )*
+        ))
+    };
+    (
+        $args:ident
+        path: ($($path:tt)*)
+        def: ($($def:tt)*)
+        arms: ($(($i:expr, $v:ident))*)
+        $next:ident $(, $rest:ident)*
+    ) => {
+        impl_args_for_tuple_helper! {
+            $args
+            path: (m::$($path)*)
+            def: (pub mod m { pub const X: usize = super::X + 1; $($def)* })
+            arms: ($(($i, $v))* ($($path)*, $next))
+            $($rest),*
+        }
+    };
 }
 
-impl<T1, T2> Args for (T1, T2)
-where
-    T1: FromRuntimeValue + Sized,
-    T2: FromRuntimeValue + Sized,
-{
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: T1 = args.nth_checked(0)?;
-        let a1: T2 = args.nth_checked(1)?;
-        Ok((a0, a1))
-    }
-}
-
-impl<T1, T2, T3> Args for (T1, T2, T3)
-where
-    T1: FromRuntimeValue + Sized,
-    T2: FromRuntimeValue + Sized,
-    T3: FromRuntimeValue + Sized,
-{
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: T1 = args.nth_checked(0)?;
-        let a1: T2 = args.nth_checked(1)?;
-        let a2: T3 = args.nth_checked(2)?;
-        Ok((a0, a1, a2))
-    }
-}
-
-impl<T1, T2, T3, T4> Args for (T1, T2, T3, T4)
-where
-    T1: FromRuntimeValue + Sized,
-    T2: FromRuntimeValue + Sized,
-    T3: FromRuntimeValue + Sized,
-    T4: FromRuntimeValue + Sized,
-{
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: T1 = args.nth_checked(0)?;
-        let a1: T2 = args.nth_checked(1)?;
-        let a2: T3 = args.nth_checked(2)?;
-        let a3: T4 = args.nth_checked(3)?;
-        Ok((a0, a1, a2, a3))
-    }
-}
-
-impl<T1, T2, T3, T4, T5> Args for (T1, T2, T3, T4, T5)
-where
-    T1: FromRuntimeValue + Sized,
-    T2: FromRuntimeValue + Sized,
-    T3: FromRuntimeValue + Sized,
-    T4: FromRuntimeValue + Sized,
-    T5: FromRuntimeValue + Sized,
-{
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: T1 = args.nth_checked(0)?;
-        let a1: T2 = args.nth_checked(1)?;
-        let a2: T3 = args.nth_checked(2)?;
-        let a3: T4 = args.nth_checked(3)?;
-        let a4: T5 = args.nth_checked(4)?;
-        Ok((a0, a1, a2, a3, a4))
-    }
-}
-
-impl<T1, T2, T3, T4, T5, T6> Args for (T1, T2, T3, T4, T5, T6)
-where
-    T1: FromRuntimeValue + Sized,
-    T2: FromRuntimeValue + Sized,
-    T3: FromRuntimeValue + Sized,
-    T4: FromRuntimeValue + Sized,
-    T5: FromRuntimeValue + Sized,
-    T6: FromRuntimeValue + Sized,
-{
-    fn parse(args: RuntimeArgs) -> Result<Self, Trap> {
-        let a0: T1 = args.nth_checked(0)?;
-        let a1: T2 = args.nth_checked(1)?;
-        let a2: T3 = args.nth_checked(2)?;
-        let a3: T4 = args.nth_checked(3)?;
-        let a4: T5 = args.nth_checked(4)?;
-        let a5: T6 = args.nth_checked(5)?;
-        Ok((a0, a1, a2, a3, a4, a5))
-    }
-}
+impl_args_for_tuple! {T1}
+impl_args_for_tuple! {T1, T2}
+impl_args_for_tuple! {T1, T2, T3}
+impl_args_for_tuple! {T1, T2, T3, T4}
+impl_args_for_tuple! {T1, T2, T3, T4, T5}
+impl_args_for_tuple! {T1, T2, T3, T4, T5, T6}

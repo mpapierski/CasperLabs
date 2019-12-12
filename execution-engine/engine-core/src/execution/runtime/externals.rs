@@ -92,28 +92,28 @@ where
 
             FunctionIndex::GetReadFuncIndex => {
                 // args(0) = pointer to destination in Wasm memory
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.set_mem_from_buf(dest_ptr)?;
                 Ok(None)
             }
 
             FunctionIndex::GetFnFuncIndex => {
                 // args(0) = pointer to destination in Wasm memory
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.set_mem_from_buf(dest_ptr)?;
                 Ok(None)
             }
 
             FunctionIndex::LoadArgFuncIndex => {
                 // args(0) = index of host runtime arg to load
-                let i: u32 = Args::parse(args)?;
+                let (i,): (u32,) = Args::parse(args)?;
                 let size = self.load_arg(i as usize);
                 Ok(Some(RuntimeValue::I32(size as i32)))
             }
 
             FunctionIndex::GetArgFuncIndex => {
                 // args(0) = pointer to destination in Wasm memory
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.set_mem_from_buf(dest_ptr)?;
                 Ok(None)
             }
@@ -160,7 +160,7 @@ where
 
             FunctionIndex::GetCallResultFuncIndex => {
                 // args(0) = pointer to destination in Wasm memory
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.set_mem_from_buf(dest_ptr)?;
                 Ok(None)
             }
@@ -207,7 +207,7 @@ where
 
             FunctionIndex::ListNamedKeysFuncIndex => {
                 // args(0) = pointer to destination in Wasm memory
-                let ptr = Args::parse(args)?;
+                let (ptr,) = Args::parse(args)?;
                 self.list_named_keys(ptr)?;
                 Ok(None)
             }
@@ -222,20 +222,20 @@ where
 
             FunctionIndex::GetCallerIndex => {
                 // args(0) = pointer to Wasm memory where to write.
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.get_caller(dest_ptr)?;
                 Ok(None)
             }
 
             FunctionIndex::GetBlocktimeIndex => {
                 // args(0) = pointer to Wasm memory where to write.
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.get_blocktime(dest_ptr)?;
                 Ok(None)
             }
 
             FunctionIndex::GasFuncIndex => {
-                let gas_arg: u32 = Args::parse(args)?;
+                let (gas_arg,): (u32,) = Args::parse(args)?;
                 self.gas(Gas::new(gas_arg.into()))?;
                 Ok(None)
             }
@@ -296,7 +296,7 @@ where
 
             FunctionIndex::RevertFuncIndex => {
                 // args(0) = status u32
-                let status = Args::parse(args)?;
+                let (status,) = Args::parse(args)?;
 
                 Err(self.revert(status))
             }
@@ -312,7 +312,7 @@ where
             FunctionIndex::RemoveAssociatedKeyFuncIndex => {
                 // args(0) = pointer to array of bytes of a public key
                 // args(1) = size of serialized bytes of public key
-                let public_key_ptr: u32 = Args::parse(args)?;
+                let (public_key_ptr,): (u32,) = Args::parse(args)?;
                 let value = self.remove_associated_key(public_key_ptr)?;
                 Ok(Some(RuntimeValue::I32(value)))
             }
@@ -441,7 +441,7 @@ where
 
             FunctionIndex::GetPhaseIndex => {
                 // args(0) = pointer to Wasm memory where to write.
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.get_phase(dest_ptr)?;
                 Ok(None)
             }
@@ -467,7 +467,7 @@ where
 
             FunctionIndex::GetMainPurseIndex => {
                 // args(0) = pointer to Wasm memory where to write.
-                let dest_ptr = Args::parse(args)?;
+                let (dest_ptr,) = Args::parse(args)?;
                 self.get_main_purse(dest_ptr)?;
                 Ok(None)
             }
