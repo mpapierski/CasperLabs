@@ -1,4 +1,9 @@
+use vergen::{generate_cargo_keys, ConstantsFlags};
+
 fn main() {
+    // Generate the 'cargo:' key output
+    generate_cargo_keys(ConstantsFlags::all()).expect("Unable to generate the cargo keys!");
+
     println!("cargo:rerun-if-changed=../../protobuf/io/casperlabs/casper/consensus/state.proto");
     println!("cargo:rerun-if-changed=../../protobuf/io/casperlabs/ipc/ipc.proto");
     println!("cargo:rerun-if-changed=../../protobuf/io/casperlabs/ipc/transforms.proto");

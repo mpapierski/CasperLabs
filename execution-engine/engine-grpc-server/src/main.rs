@@ -100,6 +100,14 @@ lazy_static! {
     static ref LOG_SETTINGS: log_settings::LogSettings = get_log_settings();
 }
 
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const APP_LONG_VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("VERGEN_SHA_SHORT"),
+    ")"
+);
+
 fn main() {
     set_panic_hook();
 
@@ -162,7 +170,8 @@ fn set_panic_hook() {
 /// Gets command line arguments
 fn get_args() -> ArgMatches<'static> {
     App::new(APP_NAME)
-        .version(env!("CARGO_PKG_VERSION"))
+        .version(APP_VERSION)
+        .long_version(APP_LONG_VERSION)
         .arg(
             Arg::with_name(ARG_LOG_LEVEL)
                 .required(false)
