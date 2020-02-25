@@ -9,6 +9,7 @@ mod execute_request;
 mod execution_effect;
 mod genesis_account;
 mod genesis_config;
+mod public_key;
 mod query_request;
 mod upgrade_request;
 mod wasm_costs;

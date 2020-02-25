@@ -12,8 +12,7 @@ impl TryFrom<ipc::DeployItem> for DeployItem {
     type Error = MappingError;
 
     fn try_from(mut pb_deploy_item: ipc::DeployItem) -> Result<Self, Self::Error> {
-        let address = PublicKey::ed25519_try_from(pb_deploy_item.get_address())
-            .map_err(|_| MappingError::invalid_public_key_length(pb_deploy_item.address.len()))?;
+        let address = PublicKey::try_from(pb_deploy_item.take_address())?;
 
         let session = pb_deploy_item
             .take_session()
@@ -30,12 +29,9 @@ impl TryFrom<ipc::DeployItem> for DeployItem {
         let gas_price = pb_deploy_item.get_gas_price();
 
         let authorization_keys = pb_deploy_item
-            .get_authorization_keys()
-            .iter()
-            .map(|raw: &Vec<u8>| {
-                PublicKey::ed25519_try_from(raw.as_slice())
-                    .map_err(|_| MappingError::invalid_public_key_length(raw.len()))
-            })
+            .take_authorization_keys()
+            .into_iter()
+            .map(PublicKey::try_from)
             .collect::<Result<BTreeSet<PublicKey>, Self::Error>>()?;
 
         let deploy_hash = pb_deploy_item.get_deploy_hash().try_into().map_err(|_| {
@@ -56,7 +52,7 @@ impl TryFrom<ipc::DeployItem> for DeployItem {
 impl From<DeployItem> for ipc::DeployItem {
     fn from(deploy_item: DeployItem) -> Self {
         let mut result = ipc::DeployItem::new();
-        result.set_address(deploy_item.address.as_bytes().to_vec());
+        result.set_address(deploy_item.address.into());
         result.set_session(deploy_item.session.into());
         result.set_payment(deploy_item.payment.into());
         result.set_gas_price(deploy_item.gas_price);
@@ -64,7 +60,7 @@ impl From<DeployItem> for ipc::DeployItem {
             deploy_item
                 .authorization_keys
                 .into_iter()
-                .map(|key| key.as_bytes().to_vec())
+                .map(ipc::PublicKey::from)
                 .collect(),
         );
         result.set_deploy_hash(deploy_item.deploy_hash.to_vec());
