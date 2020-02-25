@@ -15,7 +15,7 @@ impl From<Key> for state::Key {
         match key {
             Key::Account(account) => {
                 let mut pb_account = Key_Address::new();
-                pb_account.set_account(account.as_bytes().to_vec());
+                pb_account.set_account(state::PublicKey::from(account));
                 pb_key.set_address(pb_account);
             }
             Key::Hash(hash) => {
@@ -48,9 +48,10 @@ impl TryFrom<state::Key> for Key {
             .ok_or_else(|| ParsingError::from("Unable to parse Protobuf Key"))?;
 
         let key = match pb_key {
-            Key_oneof_value::address(pb_account) => {
-                let account = mappings::vec_to_array(pb_account.account, "Protobuf Key::Account")?;
-                Key::Account(PublicKey::ed25519_from(account))
+            Key_oneof_value::address(mut pb_account) => {
+                let account = PublicKey::try_from(pb_account.take_account())
+                    .map_err(|_| ParsingError::from("Protobuf Key::Account"))?;
+                Key::Account(account)
             }
             Key_oneof_value::hash(pb_hash) => {
                 let hash = mappings::vec_to_array(pb_hash.hash, "Protobuf Key::Hash")?;

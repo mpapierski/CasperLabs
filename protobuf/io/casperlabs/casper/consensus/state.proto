@@ -119,6 +119,16 @@ message BigInt {
 	uint32 bit_width = 2;
 }
 
+message Ed25519 {
+    bytes public_key = 1; // length == 32
+}
+
+message PublicKey {
+    oneof variant {
+        Ed25519 ed25519 = 1;
+    }
+}
+
 message Key {
 	oneof value {
 		Address address = 1;
@@ -128,7 +138,7 @@ message Key {
 	}
 
 	message Address {
-		bytes account = 1;
+		PublicKey account = 1;
 	}
 
 	message Hash {
@@ -175,14 +185,14 @@ message Account {
 	// Removed: account_activity
 	reserved 7;
 
-	bytes public_key = 1;
+	PublicKey public_key = 1;
 	Key.URef main_purse = 3;
 	repeated NamedKey named_keys = 4;
 	repeated AssociatedKey associated_keys = 5;
 	ActionThresholds action_thresholds = 6;
 
 	message AssociatedKey {
-		bytes public_key = 1;
+		PublicKey public_key = 1;
 		uint32 weight = 2;
 	}
 	message ActionThresholds {

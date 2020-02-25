@@ -2,12 +2,12 @@ use std::convert::{TryFrom, TryInto};
 
 use types::{account::PublicKey, U512};
 
-use crate::engine_server::{ipc, mappings::MappingError};
+use crate::engine_server::{ipc, mappings::MappingError, state};
 
 impl From<(PublicKey, U512)> for ipc::Bond {
     fn from((key, amount): (PublicKey, U512)) -> Self {
         let mut pb_bond = ipc::Bond::new();
-        pb_bond.set_validator_public_key(ipc::PublicKey::from(key));
+        pb_bond.set_validator_public_key(state::PublicKey::from(key));
         pb_bond.set_stake(amount.into());
         pb_bond
     }

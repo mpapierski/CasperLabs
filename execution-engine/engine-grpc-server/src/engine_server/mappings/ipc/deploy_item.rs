@@ -6,7 +6,7 @@ use std::{
 use engine_core::engine_state::deploy_item::DeployItem;
 use types::account::PublicKey;
 
-use crate::engine_server::{ipc, mappings::MappingError};
+use crate::engine_server::{ipc, mappings::MappingError, state};
 
 impl TryFrom<ipc::DeployItem> for DeployItem {
     type Error = MappingError;
@@ -60,7 +60,7 @@ impl From<DeployItem> for ipc::DeployItem {
             deploy_item
                 .authorization_keys
                 .into_iter()
-                .map(ipc::PublicKey::from)
+                .map(state::PublicKey::from)
                 .collect(),
         );
         result.set_deploy_hash(deploy_item.deploy_hash.to_vec());

@@ -2,26 +2,26 @@ use std::convert::TryFrom;
 
 use types::account::PublicKey;
 
-use crate::engine_server::{ipc, mappings::MappingError};
+use crate::engine_server::{mappings::MappingError, state};
 
-impl From<PublicKey> for ipc::PublicKey {
+impl From<PublicKey> for state::PublicKey {
     fn from(public_key: PublicKey) -> Self {
         let raw_bytes = {
             let PublicKey::Ed25519(ed25519) = public_key;
             ed25519.value().to_vec()
         };
 
-        let mut result = ipc::PublicKey::new();
-        let mut ed25519 = ipc::Ed25519::new();
+        let mut result = state::PublicKey::new();
+        let mut ed25519 = state::Ed25519::new();
         ed25519.set_public_key(raw_bytes);
         result.set_ed25519(ed25519);
         result
     }
 }
 
-impl TryFrom<ipc::PublicKey> for PublicKey {
+impl TryFrom<state::PublicKey> for PublicKey {
     type Error = MappingError;
-    fn try_from(public_key: ipc::PublicKey) -> Result<Self, Self::Error> {
+    fn try_from(public_key: state::PublicKey) -> Result<Self, Self::Error> {
         if !public_key.has_ed25519() {
             return Err(MappingError::MissingPayload);
         }
@@ -43,15 +43,15 @@ mod tests {
 
     #[test]
     fn public_key_from_missing_ed25519() {
-        let mut result = ipc::PublicKey::new();
-        result.set_ed25519(ipc::Ed25519::new());
+        let mut result = state::PublicKey::new();
+        result.set_ed25519(state::Ed25519::new());
         assert!(PublicKey::try_from(result).is_err());
     }
 
     #[test]
     fn public_key_from_invalid_ed25519_bytes() {
-        let mut result = ipc::PublicKey::new();
-        let mut ed25519 = ipc::Ed25519::new();
+        let mut result = state::PublicKey::new();
+        let mut ed25519 = state::Ed25519::new();
         ed25519.set_public_key((0u8..255).collect());
         result.set_ed25519(ed25519);
         assert!(PublicKey::try_from(result).is_err());
@@ -60,7 +60,7 @@ mod tests {
     proptest! {
         #[test]
         fn round_trip(pk in gens::public_key_arb()) {
-            test_utils::protobuf_round_trip::<PublicKey, ipc::PublicKey>(pk);
+            test_utils::protobuf_round_trip::<PublicKey, state::PublicKey>(pk);
         }
     }
 }

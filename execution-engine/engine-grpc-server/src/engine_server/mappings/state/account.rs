@@ -9,7 +9,7 @@ use types::account::{PublicKey, Weight};
 
 use super::NamedKeyMap;
 use crate::engine_server::{
-    mappings::{self, ParsingError},
+    mappings::ParsingError,
     state::{self, Account_AssociatedKey, NamedKey},
 };
 
@@ -17,7 +17,7 @@ impl From<Account> for state::Account {
     fn from(mut account: Account) -> Self {
         let mut pb_account = state::Account::new();
 
-        pb_account.set_public_key(account.public_key().as_bytes().to_vec());
+        pb_account.set_public_key(state::PublicKey::from(account.public_key()));
 
         let named_keys = mem::replace(account.named_keys_mut(), BTreeMap::new());
         let pb_named_keys: Vec<NamedKey> = NamedKeyMap::new(named_keys).into();
@@ -44,9 +44,9 @@ impl From<Account> for state::Account {
 impl TryFrom<state::Account> for Account {
     type Error = ParsingError;
 
-    fn try_from(pb_account: state::Account) -> Result<Self, Self::Error> {
-        let public_key =
-            mappings::vec_to_array(pb_account.public_key, "Protobuf Account::PublicKey")?;
+    fn try_from(mut pb_account: state::Account) -> Result<Self, Self::Error> {
+        let public_key = PublicKey::try_from(pb_account.take_public_key())
+            .map_err(|_| ParsingError::from("Error parsing Protobuf PublicKey field"))?;
 
         let named_keys: NamedKeyMap = pb_account.named_keys.into_vec().try_into()?;
 
@@ -92,7 +92,7 @@ impl TryFrom<state::Account> for Account {
         };
 
         let account = Account::new(
-            PublicKey::ed25519_from(public_key),
+            public_key,
             named_keys.into_inner(),
             main_purse,
             associated_keys,
@@ -105,7 +105,7 @@ impl TryFrom<state::Account> for Account {
 impl From<(&PublicKey, &Weight)> for Account_AssociatedKey {
     fn from((public_key, weight): (&PublicKey, &Weight)) -> Self {
         let mut pb_associated_key = Account_AssociatedKey::new();
-        pb_associated_key.set_public_key(public_key.as_bytes().to_vec());
+        pb_associated_key.set_public_key(state::PublicKey::from(*public_key));
         pb_associated_key.set_weight(weight.value().into());
         pb_associated_key
     }
@@ -114,11 +114,9 @@ impl From<(&PublicKey, &Weight)> for Account_AssociatedKey {
 impl TryFrom<Account_AssociatedKey> for (PublicKey, Weight) {
     type Error = ParsingError;
 
-    fn try_from(pb_associated_key: Account_AssociatedKey) -> Result<Self, Self::Error> {
-        let public_key = PublicKey::ed25519_from(mappings::vec_to_array(
-            pb_associated_key.public_key,
-            "Protobuf Account::AssociatedKey",
-        )?);
+    fn try_from(mut pb_associated_key: Account_AssociatedKey) -> Result<Self, Self::Error> {
+        let public_key = PublicKey::try_from(pb_associated_key.take_public_key())
+            .map_err(|_| ParsingError::from("Protobuf Account::AssociatedKey"))?;
 
         let weight = weight_from(pb_associated_key.weight, "Protobuf AssociatedKey::Weight")?;
 
