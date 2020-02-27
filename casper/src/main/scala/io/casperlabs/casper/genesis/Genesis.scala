@@ -51,11 +51,11 @@ object Genesis {
       // Sorted list of bonded validators.
       bonds = genesisConfig.accounts
         .sortBy { x =>
-          x.publicKey -> x.getBondedAmount.value
+          x.publicKey.get.getEd25519.publicKey -> x.getBondedAmount.value
         }
         .collect {
           case account if account.bondedAmount.isDefined && account.getBondedAmount.value != "0" =>
-            PublicKey(account.publicKey.toByteArray) -> account.bondedAmount
+            PublicKey(account.publicKey.get.getEd25519.publicKey.toByteArray) -> account.bondedAmount
         }
         .toSeq
         .map {

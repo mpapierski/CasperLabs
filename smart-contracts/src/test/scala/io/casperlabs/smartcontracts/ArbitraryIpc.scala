@@ -2,6 +2,7 @@ package io.casperlabs.smartcontracts
 
 import com.google.protobuf.ByteString
 import io.casperlabs.ipc.DeployPayload.Payload
+import io.casperlabs.casper.consensus.state.{Ed25519, PublicKey}
 import io.casperlabs.ipc.{
   DeployCode,
   DeployItem,
@@ -57,11 +58,16 @@ trait ArbitraryIpc {
       gasPrice          <- Gen.choose(1L, 1000)
       authorizationKeys <- Gen.listOfN(10, genBytes(32))
     } yield DeployItem()
-      .withAddress(address)
+      .withAddress(
+        PublicKey().withEd25519(Ed25519().withPublicKey(address))
+      )
       .withSession(sessionCode)
       .withPayment(paymentCode)
       .withGasPrice(gasPrice)
-      .withAuthorizationKeys(authorizationKeys)
+      .withAuthorizationKeys(
+        authorizationKeys
+          .map(address => PublicKey().withEd25519(Ed25519().withPublicKey(address)))
+      )
   }
 
   def sizeDeployItemList(min: Int, max: Int): Gen[List[DeployItem]] =

@@ -104,8 +104,18 @@ class ChainSpecTest extends WordSpecLike with Matchers with Inspectors {
 
           val accounts = genesis.accounts
           accounts should have size 4
-          accounts(0).publicKey shouldBe ByteString.copyFrom(
-            Base64.tryDecode("o8C2vZUXgaDKX3pfXmSJxeNfkHueLMrgiP1wIbSYHvo=").get
+          accounts(0).publicKey shouldBe Some(
+            state
+              .PublicKey()
+              .withEd25519(
+                state
+                  .Ed25519()
+                  .withPublicKey(
+                    ByteString.copyFrom(
+                      Base64.tryDecode("o8C2vZUXgaDKX3pfXmSJxeNfkHueLMrgiP1wIbSYHvo=").get
+                    )
+                  )
+              )
           )
           accounts(0).getBalance.value shouldBe "0"
           accounts(0).getBalance.bitWidth shouldBe 512

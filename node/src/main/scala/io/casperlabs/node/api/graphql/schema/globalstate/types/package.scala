@@ -156,11 +156,14 @@ package object types {
 
   lazy val AccountAssociatedKey = ObjectType(
     "AccountAssociatedKey",
-    fields[Unit, (cltype.Account.PublicKey, cltype.Account.Weight)](
+    fields[Unit, (cltype.PublicKey, cltype.Account.Weight)](
       Field(
         "pubKey",
         StringType,
-        resolve = c => Base16.encode(c.value._1.bytes.toArray)
+        resolve = c =>
+          Base16.encode(c.value._1 match {
+            case cltype.PublicKey.ED25519(publicKey) => publicKey.bytes.toArray
+          })
       ),
       Field("weight", IntType, resolve = _.value._2.toInt)
     )
@@ -177,7 +180,16 @@ package object types {
   lazy val Account = ObjectType(
     "Account",
     fields[Unit, cltype.Account](
-      Field("pubKey", StringType, resolve = c => Base16.encode(c.value.publicKey.bytes.toArray)),
+      Field(
+        "pubKey",
+        StringType,
+        resolve = c =>
+          Base16.encode(
+            c.value.publicKey match {
+              case cltype.PublicKey.ED25519(publicKey) => publicKey.bytes.toArray
+            }
+          )
+      ),
       Field("mainPurse", KeyURef, resolve = c => cltype.Key.URef(c.value.mainPurse)),
       Field("namedKeys", ListType(NamedKey), resolve = _.value.namedKeys.toList),
       Field(

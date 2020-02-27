@@ -8,7 +8,8 @@ import cats.implicits._
 import com.google.protobuf.ByteString
 import io.casperlabs.casper.Estimator.{BlockHash, Validator}
 import io.casperlabs.casper.consensus.Block.{GlobalState, Justification, MessageType}
-import io.casperlabs.casper.consensus.state.ProtocolVersion
+import io.casperlabs.casper.consensus.state
+import io.casperlabs.casper.consensus.state.{ProtocolVersion, PublicKey}
 import io.casperlabs.casper.consensus.{BlockSummary, _}
 import io.casperlabs.casper.{PrettyPrinter, ValidatorIdentity}
 import io.casperlabs.catscontrib.MonadThrowable
@@ -647,11 +648,15 @@ object ProtoUtil {
       payment <- toPayload(d.getBody.payment)
     } yield {
       ipc.DeployItem(
-        address = d.getHeader.accountPublicKey,
+        address = Some(
+          state.PublicKey().withEd25519(state.Ed25519().withPublicKey(d.getHeader.accountPublicKey))
+        ),
         session = session,
         payment = payment,
         gasPrice = GAS_PRICE,
-        authorizationKeys = d.approvals.map(_.approverPublicKey),
+        authorizationKeys = d.approvals.map(
+          x => state.PublicKey().withEd25519(state.Ed25519().withPublicKey(x.approverPublicKey))
+        ),
         deployHash = d.deployHash
       )
     }

@@ -41,7 +41,15 @@ class GenesisTest extends FlatSpec with Matchers with StorageFixture {
           case (key, balance, bond) =>
             ipc.ChainSpec
               .GenesisAccount()
-              .withPublicKey(ByteString.copyFrom(java.util.Base64.getDecoder.decode(key)))
+              .withPublicKey(
+                state
+                  .PublicKey()
+                  .withEd25519(
+                    state
+                      .Ed25519()
+                      .withPublicKey(ByteString.copyFrom(java.util.Base64.getDecoder.decode(key)))
+                  )
+              )
               .withBalance(state.BigInt(balance.toString, bitWidth = 512))
               .withBondedAmount(state.BigInt(bond.toString, bitWidth = 512))
         })

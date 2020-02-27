@@ -26,11 +26,31 @@ object ProtoMappings {
   )
 
   def toProto(a: Account): state.Account = state.Account(
-    publicKey = ByteString.copyFrom(a.publicKey.bytes.toArray),
+    publicKey = Some(a.publicKey match {
+      case PublicKey.ED25519(publicKey) =>
+        state
+          .PublicKey()
+          .withEd25519(
+            state.Ed25519().withPublicKey(ByteString.copyFrom(publicKey.bytes.toArray))
+          ),
+    }),
     mainPurse = toProto(Key.URef(a.mainPurse)).value.uref,
     namedKeys = toProto(a.namedKeys),
     associatedKeys = a.associatedKeys.toSeq.map {
-      case (k, w) => state.Account.AssociatedKey(ByteString.copyFrom(k.bytes.toArray), w.toInt)
+      case (k, w) =>
+        state.Account.AssociatedKey(
+          k match {
+            case PublicKey.ED25519(publicKey) =>
+              Some(
+                state
+                  .PublicKey()
+                  .withEd25519(
+                    state.Ed25519().withPublicKey(ByteString.copyFrom(publicKey.bytes.toArray))
+                  )
+              )
+          },
+          w.toInt
+        )
     },
     actionThresholds = Some(
       state.Account
@@ -64,8 +84,19 @@ object ProtoMappings {
   def toProto(k: Key): state.Key = k match {
     case Key.Account(address) =>
       state.Key(
-        state.Key.Value.Address(state.Key.Address(ByteString.copyFrom(address.bytes.toArray)))
+        state.Key.Value.Address(
+          state.Key.Address(
+            Some(
+              state
+                .PublicKey()
+                .withEd25519(
+                  state.Ed25519().withPublicKey(ByteString.copyFrom(address.bytes.toArray))
+                )
+            )
+          )
+        )
       )
+    // }
 
     case Key.Hash(address) =>
       state.Key(
@@ -230,8 +261,8 @@ object ProtoMappings {
   def fromProto(k: state.Key): Either[Error, Key] = k.value match {
     case state.Key.Value.Empty => Left(Error.EmptyKeyVariant)
 
-    case state.Key.Value.Address(state.Key.Address(address)) =>
-      toByteArray32(address).map(Key.Account.apply)
+    case state.Key.Value.Address(state.Key.Address(publicKey)) =>
+      toByteArray32(publicKey.get.getEd25519.publicKey).map(Key.Account.apply)
 
     case state.Key.Value.Hash(state.Key.Hash(address)) =>
       toByteArray32(address).map(Key.Hash.apply)

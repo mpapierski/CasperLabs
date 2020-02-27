@@ -320,7 +320,13 @@ object ChainSpecReader {
               .withAccounts(accounts.map { account =>
                 ipc.ChainSpec
                   .GenesisAccount()
-                  .withPublicKey(ByteString.copyFrom(account.publicKey))
+                  .withPublicKey(
+                    state
+                      .PublicKey()
+                      .withEd25519(
+                        state.Ed25519().withPublicKey(ByteString.copyFrom(account.publicKey))
+                      )
+                  )
                   .withBalance(state.BigInt(account.initialBalance.toString, bitWidth = 512))
                   .withBondedAmount(
                     state.BigInt(account.initialBondedAmount.toString, bitWidth = 512)

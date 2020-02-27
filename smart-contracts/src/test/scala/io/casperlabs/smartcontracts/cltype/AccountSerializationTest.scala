@@ -29,7 +29,15 @@ object AccountSerializationTest {
     actionThresholds <- genWeight.flatMap { d =>
                          genWeight.map(k => Account.ActionThresholds(d, k))
                        }
-  } yield Account(publicKey, namedKeys, mainPurse, associatedKeys, actionThresholds)
+  } yield Account(
+    PublicKey.ED25519(publicKey),
+    namedKeys,
+    mainPurse,
+    associatedKeys.map({
+      case (k, v) => (PublicKey.ED25519(k), v)
+    }),
+    actionThresholds
+  )
 
   implicit val arbAccount: Arbitrary[Account] = Arbitrary(genAccount)
 }

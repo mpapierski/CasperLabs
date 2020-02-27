@@ -1,7 +1,8 @@
 package io.casperlabs.smartcontracts.cltype
 
 import io.casperlabs.smartcontracts.bytesrepr.{BytesView, FromBytes, ToBytes}
-import Account.{ActionThresholds, PublicKey, Weight}
+import Account.{ActionThresholds, Weight}
+// import PublicKey
 
 case class Account(
     publicKey: PublicKey,
@@ -12,8 +13,7 @@ case class Account(
 )
 
 object Account {
-  type PublicKey = ByteArray32
-  type Weight    = Byte
+  type Weight = Byte
   case class ActionThresholds(deployment: Weight, keyManagement: Weight)
 
   implicit val toBytesActionThresholds: ToBytes[ActionThresholds] = new ToBytes[ActionThresholds] {
@@ -25,9 +25,8 @@ object Account {
     FromBytes.tuple2(FromBytes.byte, FromBytes.byte).map {
       case (deployment, keyManagement) => ActionThresholds(deployment, keyManagement)
     }
-
-  private implicit val publicKeyOrdering = Ordering.fromLessThan[PublicKey] {
-    case (k1, k2) =>
+  implicit val publicKeyOrdering = Ordering.fromLessThan[PublicKey] {
+    case (PublicKey.ED25519(k1), PublicKey.ED25519(k2)) =>
       k1.bytes.length < k2.bytes.length ||
         (k1.bytes.length == k2.bytes.length && k1.bytes
           .zip(k2.bytes)
@@ -35,7 +34,6 @@ object Account {
           .headOption
           .exists { case (b1, b2) => b1 < b2 })
   }
-
   implicit val toBytesAccount: ToBytes[Account] = new ToBytes[Account] {
     override def toBytes(a: Account): Array[Byte] =
       ToBytes.toBytes(a.publicKey) ++
@@ -47,10 +45,10 @@ object Account {
 
   val deserializer: FromBytes.Deserializer[Account] =
     for {
-      publicKey        <- ByteArray32.deserializer
+      publicKey        <- PublicKey.deserializer
       namedKeys        <- FromBytes.map(FromBytes.string, Key.deserializer)
       mainPurse        <- URef.deserializer
-      associatedKeys   <- FromBytes.map(ByteArray32.deserializer, FromBytes.byte)
+      associatedKeys   <- FromBytes.map(PublicKey.deserializer, FromBytes.byte)
       actionThresholds <- desActionThresholds
     } yield Account(publicKey, namedKeys, mainPurse, associatedKeys, actionThresholds)
 }

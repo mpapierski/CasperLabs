@@ -48,7 +48,7 @@ message PublicKey {
 }
 
 message Bond {
-    io.casperlabs.casper.consensus.state.PublicKey validator_public_key = 1;
+    bytes validator_public_key = 1;
     io.casperlabs.casper.consensus.state.BigInt stake = 2;
 }
 

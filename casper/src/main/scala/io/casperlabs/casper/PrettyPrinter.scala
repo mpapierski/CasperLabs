@@ -4,15 +4,23 @@ import com.google.protobuf.ByteString
 import io.casperlabs.casper.consensus.state.Key.URef.AccessRights
 import io.casperlabs.crypto.codec._
 import io.casperlabs.ipc._
+import io.casperlabs.casper.consensus.state
 import io.casperlabs.casper.consensus.state._
+import io.casperlabs.smartcontracts.cltype
 
 object PrettyPrinter {
 
   def buildStringNoLimit(b: ByteString): String = Base16.encode(b.toByteArray)
 
+  def buildString(publicKey: cltype.PublicKey): String = publicKey match {
+    case cltype.PublicKey.ED25519(address) =>
+      s"Ed25591(${Base16.encode(address.bytes.toArray)})"
+  }
+
   def buildString(k: Key): String = k.value match {
-    case Key.Value.Empty                         => "KeyEmpty"
-    case Key.Value.Address(Key.Address(address)) => s"Address(${buildString(address)})"
+    case Key.Value.Empty => "KeyEmpty"
+    case Key.Value.Address(Key.Address(publicKey)) =>
+      s"Address(Ed25519(${buildString(publicKey.get.getEd25519.publicKey)}))"
     case Key.Value.Uref(Key.URef(id, accessRights)) =>
       s"URef(${buildString(id)}, ${buildString(accessRights)})"
     case Key.Value.Hash(Key.Hash(hash)) => s"Hash(${buildString(hash)})"
@@ -57,7 +65,7 @@ object PrettyPrinter {
           actionThresholds
         )
         ) =>
-      s"Account(${buildString(pk)}, {${urefs.map(buildString).mkString(",")}}, ${mainPurse
+      s"Account(${buildString(pk.get.getEd25519.publicKey)}, {${urefs.map(buildString).mkString(",")}}, ${mainPurse
         .map(buildString)}, {${associatedKeys
         .map(buildString)
         .mkString(",")}, {${actionThresholds.map(buildString)}})"
@@ -78,7 +86,7 @@ object PrettyPrinter {
           actionThresholds
         )
         ) =>
-      s"Account(${buildString(pk)}, {${urefs.map(buildString).mkString(",")}}, ${mainPurse
+      s"Account(${buildString(pk.get.getEd25519.publicKey)}, {${urefs.map(buildString).mkString(",")}}, ${mainPurse
         .map(buildString)}, {${associatedKeys
         .map(buildString)
         .mkString(",")}, {${actionThresholds.map(buildString)}})"
@@ -140,7 +148,7 @@ object PrettyPrinter {
     s"URef(${buildString(uref.uref)}, ${buildString(uref.accessRights)})"
 
   private def buildString(ak: Account.AssociatedKey): String = {
-    val pk     = buildString(ak.publicKey)
+    val pk     = buildString(ak.publicKey.get.getEd25519.publicKey)
     val weight = ak.weight
     s"$pk:$weight"
   }

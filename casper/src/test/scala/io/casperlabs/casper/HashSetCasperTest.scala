@@ -7,6 +7,7 @@ import com.google.protobuf.ByteString
 import io.casperlabs.casper.MultiParentCasperImpl.Broadcaster
 import io.casperlabs.casper.consensus.Block.{Justification, ProcessedDeploy}
 import io.casperlabs.casper.consensus._
+import io.casperlabs.casper.consensus.state
 import io.casperlabs.casper.genesis.Genesis
 import io.casperlabs.casper.helper.DeployOps.ChangeDeployOps
 import io.casperlabs.casper.helper._
@@ -1450,7 +1451,9 @@ object HashSetCasperTest {
       .withAccounts((bonds.keySet ++ wallets.keySet).toSeq.map { key =>
         ipc.ChainSpec
           .GenesisAccount()
-          .withPublicKey(ByteString.copyFrom(key))
+          .withPublicKey(
+            state.PublicKey().withEd25519(state.Ed25519().withPublicKey(ByteString.copyFrom(key)))
+          )
           .withBalance(state.BigInt(wallets.getOrElse(key, 0L).toString, bitWidth = 512))
           .withBondedAmount(state.BigInt(bonds.getOrElse(key, 0L).toString, bitWidth = 512))
       })
