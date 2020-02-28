@@ -84,19 +84,8 @@ object ProtoMappings {
   def toProto(k: Key): state.Key = k match {
     case Key.Account(address) =>
       state.Key(
-        state.Key.Value.Address(
-          state.Key.Address(
-            Some(
-              state
-                .PublicKey()
-                .withEd25519(
-                  state.Ed25519().withPublicKey(ByteString.copyFrom(address.bytes.toArray))
-                )
-            )
-          )
-        )
+        state.Key.Value.Address(state.Key.Address(ByteString.copyFrom(address.bytes.toArray)))
       )
-    // }
 
     case Key.Hash(address) =>
       state.Key(
@@ -261,8 +250,8 @@ object ProtoMappings {
   def fromProto(k: state.Key): Either[Error, Key] = k.value match {
     case state.Key.Value.Empty => Left(Error.EmptyKeyVariant)
 
-    case state.Key.Value.Address(state.Key.Address(publicKey)) =>
-      toByteArray32(publicKey.get.getEd25519.publicKey).map(Key.Account.apply)
+    case state.Key.Value.Address(state.Key.Address(address)) =>
+      toByteArray32(address).map(Key.Account.apply)
 
     case state.Key.Value.Hash(state.Key.Hash(address)) =>
       toByteArray32(address).map(Key.Hash.apply)
@@ -280,7 +269,6 @@ object ProtoMappings {
         } yield Key.Local(seed, hash)
       }
   }
-
   private def fromArg(arg: Deploy.Arg.Value): Either[Error, CLValue] = arg.value match {
     case Deploy.Arg.Value.Value.Empty          => Left(Error.EmptyArgValueVariant)
     case Deploy.Arg.Value.Value.IntValue(x)    => Right(CLValue.from(x, CLType.I32))

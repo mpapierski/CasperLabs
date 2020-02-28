@@ -13,9 +13,9 @@ impl From<Key> for state::Key {
     fn from(key: Key) -> Self {
         let mut pb_key = state::Key::new();
         match key {
-            Key::Account(account) => {
+            Key::Account(PublicKey::Ed25519(bytes)) => {
                 let mut pb_account = Key_Address::new();
-                pb_account.set_account(state::PublicKey::from(account));
+                pb_account.set_account(bytes.value().to_vec());
                 pb_key.set_address(pb_account);
             }
             Key::Hash(hash) => {
@@ -49,7 +49,7 @@ impl TryFrom<state::Key> for Key {
 
         let key = match pb_key {
             Key_oneof_value::address(mut pb_account) => {
-                let account = PublicKey::try_from(pb_account.take_account())
+                let account = PublicKey::ed25519_try_from(&pb_account.take_account())
                     .map_err(|_| ParsingError::from("Protobuf Key::Account"))?;
                 Key::Account(account)
             }

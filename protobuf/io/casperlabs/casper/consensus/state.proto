@@ -138,7 +138,7 @@ message Key {
 	}
 
 	message Address {
-		PublicKey account = 1;
+		bytes account = 1;
 	}
 
 	message Hash {

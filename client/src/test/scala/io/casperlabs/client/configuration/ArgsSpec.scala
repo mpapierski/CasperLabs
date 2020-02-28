@@ -27,7 +27,7 @@ class ArgsSpec extends FlatSpec with Matchers {
       {"name": "surname", "value": {"string_value": "Nakamoto"}},
       {"name": "big_number", "value": {"big_int": {"value": "2", "bit_width": 512}}},
       {"name": "my_hash", "value": {"key": {"hash": {"hash": "${hex_account}"}}}},
-      {"name": "my_address", "value": {"key": {"address": {"account": {"ed25519": {"public_key": "${hex_account}"}}}}}},
+      {"name": "my_address", "value": {"key": {"address": {"account": "${hex_account}"}}}},
       {"name": "my_uref", "value": {"key": {"uref": {"uref": "${hex_account}", "access_rights": 5}}}},
       {"name": "my_local", "value": {"key": {"local": {"hash": "${hex_account}"}}}},
       {"name": "my_int_value", "value": {"int_value": ${int_value}}},
@@ -53,7 +53,9 @@ class ArgsSpec extends FlatSpec with Matchers {
         args(3) shouldBe Arg("maybe_long").withValue(
           Arg.Value(Arg.Value.Value.OptionalValue(Arg.Value(Arg.Value.Value.LongValue(amount))))
         )
-        args(4) shouldBe Arg("surname").withValue(Arg.Value(Arg.Value.Value.StringValue("Nakamoto")))
+        args(4) shouldBe Arg("surname").withValue(
+          Arg.Value(Arg.Value.Value.StringValue("Nakamoto"))
+        )
         args(5) shouldBe Arg("big_number").withValue(
           Arg.Value(Arg.Value.Value.BigInt(BigInt("2", 512)))
         )
@@ -62,16 +64,7 @@ class ArgsSpec extends FlatSpec with Matchers {
         )
         args(7) shouldBe Arg("my_address").withValue(
           Arg.Value(
-            Arg.Value.Value
-              .Key(
-                Key().withAddress(
-                  Key.Address(
-                    Some(
-                      PublicKey().withEd25519(Ed25519().withPublicKey(ByteString.copyFrom(account)))
-                    )
-                  )
-                )
-              )
+            Arg.Value.Value.Key(Key().withAddress(Key.Address(ByteString.copyFrom(account))))
           )
         )
         args(8) shouldBe Arg("my_uref").withValue(

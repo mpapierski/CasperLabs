@@ -18,9 +18,8 @@ object PrettyPrinter {
   }
 
   def buildString(k: Key): String = k.value match {
-    case Key.Value.Empty => "KeyEmpty"
-    case Key.Value.Address(Key.Address(publicKey)) =>
-      s"Address(Ed25519(${buildString(publicKey.get.getEd25519.publicKey)}))"
+    case Key.Value.Empty                         => "KeyEmpty"
+    case Key.Value.Address(Key.Address(address)) => s"Address(${buildString(address)})"
     case Key.Value.Uref(Key.URef(id, accessRights)) =>
       s"URef(${buildString(id)}, ${buildString(accessRights)})"
     case Key.Value.Hash(Key.Hash(hash)) => s"Hash(${buildString(hash)})"

@@ -35,12 +35,7 @@ class UtilsTest extends FlatSpec with EitherValues with Matchers {
   }
 
   it should "convert an address-type key successfully" in {
-    attemptToKeyTest(
-      32,
-      "address",
-      _.isAddress,
-      _.address.get.account.get.getEd25519.publicKey.toByteArray
-    )
+    attemptToKeyTest(32, "address", _.isAddress, _.address.get.account.toByteArray)
   }
 
   it should "fail for any invalid key type" in {

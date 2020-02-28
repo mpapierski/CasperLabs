@@ -92,16 +92,7 @@ object Utils {
         }
       case "address" =>
         keyBytes.size match {
-          case 32 =>
-            state
-              .Key(
-                state.Key.Value.Address(
-                  state.Key.Address(
-                    Some(state.PublicKey().withEd25519(state.Ed25519().withPublicKey(keyBytes)))
-                  )
-                )
-              )
-              .pure[F]
+          case 32 => state.Key(state.Key.Value.Address(state.Key.Address(keyBytes))).pure[F]
           case n =>
             appErr.raiseError(
               new IllegalArgumentException(
