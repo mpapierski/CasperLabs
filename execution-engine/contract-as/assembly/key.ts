@@ -29,18 +29,28 @@ export class PublicKey {
     }
 
     static fromBytes(bytes: Uint8Array): Result<PublicKey> {
-        if (bytes.length < 32) {
+        if (bytes.length < 33) {
             return new Result<PublicKey>(null, BytesreprError.EarlyEndOfStream, 0);
         }
 
-        let publicKeyBytes = bytes.subarray(0, 32);
-        let publicKey = new PublicKey(PUBLIC_KEY_ED25519_ID, publicKeyBytes);
-        let ref = new Ref<PublicKey>(publicKey);
-        return new Result<PublicKey>(ref, BytesreprError.Ok, 32);
+        let currentPos = 1;
+        const variant = bytes[0];
+        if (variant == PUBLIC_KEY_ED25519_ID) {
+            let publicKeyBytes = bytes.subarray(currentPos, currentPos + 32);
+            currentPos += 32;
+            let publicKey = new PublicKey(variant, publicKeyBytes);
+            let ref = new Ref<PublicKey>(publicKey);
+            return new Result<PublicKey>(ref, BytesreprError.Ok, currentPos);
+        }
+        else {
+            return new Result<PublicKey>(null, BytesreprError.FormattingError, currentPos);
+        }
     }
 
     toBytes(): Array<u8> {
-        return typedToArray(this.bytes);
+        let bytes = new Array<u8>(1);
+        bytes[0] = <u8>this.variant;
+        return bytes.concat(typedToArray(this.bytes));
     }
 }
 
