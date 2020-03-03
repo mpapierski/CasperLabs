@@ -109,8 +109,10 @@ object DeployRuntime {
   private def bigIntArg(name: String, value: BigInt) =
     arg(name, Deploy.Arg.Value.Value.BigInt(state.BigInt(value.toString, bitWidth = 512)))
 
-  private def bytesArg(name: String, value: Array[Byte]) =
-    arg(name, Deploy.Arg.Value.Value.BytesValue(ByteString.copyFrom(value)))
+  private val ed25519Tag: Byte = 0;
+
+  private def accountArg(name: String, value: Array[Byte]) =
+    arg(name, Deploy.Arg.Value.Value.BytesValue(ByteString.copyFrom(ed25519Tag +: value)))
 
   // This is true for any array but I didn't want to go as far as writing type classes.
   private def serializeArray(ba: Array[Byte]): Array[Byte] =
@@ -349,7 +351,7 @@ object DeployRuntime {
       maybeEitherPublicKey = senderPublicKey.asRight[String].some,
       maybeEitherPrivateKey = senderPrivateKey.asRight[String].some,
       List(
-        bytesArg("account", recipientPublicKey),
+        accountArg("account", recipientPublicKey),
         bigIntArg("amount", amount)
       ),
       exit,

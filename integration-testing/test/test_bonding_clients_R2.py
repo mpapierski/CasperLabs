@@ -26,6 +26,7 @@ def add_funded_account_to_network(network: OneNodeNetwork, account_number: int):
     assert (
         len(network.docker_nodes) == prev_number + 1
     ), f"Total number of nodes should be {prev_number + 1}."
+
     response = node0.d_client.transfer(
         amount=1000000000,
         private_key=GENESIS_ACCOUNT.private_key_docker_path,

@@ -1,5 +1,7 @@
+import struct
 import json
 import base64
+from enum import Enum
 from . import consensus_pb2 as consensus, state_pb2 as state
 
 
@@ -7,6 +9,10 @@ from google.protobuf import json_format
 
 Arg = consensus.Deploy.Arg
 Value = consensus.Deploy.Arg.Value
+
+
+class PublicKeyVariant(Enum):
+    ED25519 = 0
 
 
 class ABI:
@@ -25,12 +31,18 @@ class ABI:
         return Arg(name=name, value=Value(bytes_value=a))
 
     @staticmethod
-    def account(name, a):
+    def account(name, a, variant=PublicKeyVariant.ED25519):
+        raw_bytes = None
         if type(a) == bytes and len(a) == 32:
-            return ABI.byte_array(name, a)
+            raw_bytes = a
         if type(a) == str and len(a) == 64:
-            return ABI.byte_array(name, bytes.fromhex(a))
-        raise Exception("account must be 32 bytes or 64 characters long string")
+            raw_bytes = bytes.fromhex(a)
+
+        if raw_bytes is None:
+            raise Exception("account must be 32 bytes or 64 characters long string")
+
+        public_key_bytes = struct.pack('<B32s', variant.value, raw_bytes)
+        return ABI.byte_array(name, public_key_bytes)
 
     @staticmethod
     def int_value(name, i: int):
