@@ -2,7 +2,6 @@ package io.casperlabs.smartcontracts.cltype
 
 import io.casperlabs.smartcontracts.bytesrepr.{BytesView, FromBytes, ToBytes}
 import Account.{ActionThresholds, Weight}
-// import PublicKey
 
 case class Account(
     publicKey: PublicKey,
