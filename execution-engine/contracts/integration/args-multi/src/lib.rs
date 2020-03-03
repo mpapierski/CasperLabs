@@ -1,8 +1,7 @@
 #![no_std]
 
 use contract::{contract_api::runtime, unwrap_or_revert::UnwrapOrRevert};
-use types::account::PublicKey;
-use types::ApiError;
+use types::{account::PublicKey, ApiError};
 
 enum Arg {
     AccountNumber = 0,
