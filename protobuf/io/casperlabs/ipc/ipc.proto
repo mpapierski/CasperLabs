@@ -37,16 +37,6 @@ message DeployPayload {
   }
 }
 
-message Ed25519 {
-    bytes public_key = 1; // length == 32
-}
-
-message PublicKey {
-    oneof variant {
-        Ed25519 ed25519 = 1;
-    }
-}
-
 message Bond {
     bytes validator_public_key = 1;
     io.casperlabs.casper.consensus.state.BigInt stake = 2;

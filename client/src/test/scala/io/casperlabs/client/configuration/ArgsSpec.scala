@@ -3,7 +3,6 @@ package io.casperlabs.client.configuration
 import org.scalatest._
 import io.casperlabs.crypto.codec.Base16
 import io.casperlabs.casper.consensus.Deploy.Arg
-import io.casperlabs.casper.consensus.state.{Ed25519, PublicKey}
 import io.casperlabs.casper.consensus.state.BigInt
 import io.casperlabs.casper.consensus.state.Key
 import io.casperlabs.casper.consensus.state.IntList
