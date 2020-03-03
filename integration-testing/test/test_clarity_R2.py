@@ -61,7 +61,9 @@ def test_create_account_key(one_node_network_with_clarity):
     title = driver.find_element(
         By.CSS_SELECTOR, "table tr:first-child td:last-child"
     ).get_attribute("title")
-    assert title.startswith("Successfully"), 'Expected Successfully but got {!r} instead'.format(title)
+    assert title.startswith(
+        "Successfully"
+    ), "Expected Successfully but got {!r} instead".format(title)
 
     # Verify the balance of created account to be exactly 10,000,000
     driver.find_element(By.LINK_TEXT, "Account Keys").click()

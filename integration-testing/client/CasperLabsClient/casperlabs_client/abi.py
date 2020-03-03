@@ -41,7 +41,7 @@ class ABI:
         if raw_bytes is None:
             raise Exception("account must be 32 bytes or 64 characters long string")
 
-        public_key_bytes = struct.pack('<B32s', variant.value, raw_bytes)
+        public_key_bytes = struct.pack("<B32s", variant.value, raw_bytes)
         return ABI.byte_array(name, public_key_bytes)
 
     @staticmethod
