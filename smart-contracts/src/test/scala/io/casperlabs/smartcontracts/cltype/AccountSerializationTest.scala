@@ -33,9 +33,7 @@ object AccountSerializationTest {
     publicKey,
     namedKeys,
     mainPurse,
-    associatedKeys.map({
-      case (k, v) => (k, v)
-    }),
+    associatedKeys,
     actionThresholds
   )
 
