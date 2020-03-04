@@ -20,10 +20,7 @@ object PublicKey {
 
   val deserializer: FromBytes.Deserializer[PublicKey] =
     FromBytes.byte.flatMap {
-      case tag if tag == ED25519.tag =>
-        for {
-          publicKey <- ByteArray32.deserializer
-        } yield ED25519(publicKey)
-      case other => FromBytes.raise(FromBytes.Error.InvalidVariantTag(other, "PublicKey"))
+      case tag if tag == ED25519.tag => ByteArray32.deserializer.map(ED25519.apply)
+      case other                     => FromBytes.raise(FromBytes.Error.InvalidVariantTag(other, "PublicKey"))
     }
 }

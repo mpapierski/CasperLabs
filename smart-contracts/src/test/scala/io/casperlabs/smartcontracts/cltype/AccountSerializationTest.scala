@@ -16,13 +16,13 @@ object AccountSerializationTest {
   private val genWeight = Gen.choose[Byte](-128, 127)
 
   val genAccount: Gen[Account] = for {
-    publicKey <- ByteArray32SerializationTest.genByteArray32
+    publicKey <- PublicKeySerializationTest.genPublicKey
     namedKeys <- Gen.mapOf(
                   Gen.alphaStr.flatMap(s => KeySerializationTest.genKey.map(k => s -> k))
                 )
     mainPurse <- URefSerializationTest.genURef
     associatedKeys <- Gen.mapOf(
-                       ByteArray32SerializationTest.genByteArray32.flatMap(
+                       PublicKeySerializationTest.genPublicKey.flatMap(
                          k => genWeight.map(w => k -> w)
                        )
                      )
@@ -30,11 +30,11 @@ object AccountSerializationTest {
                          genWeight.map(k => Account.ActionThresholds(d, k))
                        }
   } yield Account(
-    PublicKey.ED25519(publicKey),
+    publicKey,
     namedKeys,
     mainPurse,
     associatedKeys.map({
-      case (k, v) => (PublicKey.ED25519(k), v)
+      case (k, v) => (k, v)
     }),
     actionThresholds
   )

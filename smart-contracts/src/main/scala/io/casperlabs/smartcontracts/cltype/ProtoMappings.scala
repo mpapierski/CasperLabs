@@ -25,32 +25,23 @@ object ProtoMappings {
     protocolVersion = Some(toProto(c.protocolVersion))
   )
 
-  def toProto(a: Account): state.Account = state.Account(
-    publicKey = Some(a.publicKey match {
+  def toProto(pk: PublicKey): state.PublicKey =
+    pk match {
       case PublicKey.ED25519(publicKey) =>
         state
           .PublicKey()
           .withEd25519(
             state.Ed25519().withPublicKey(ByteString.copyFrom(publicKey.bytes.toArray))
-          ),
-    }),
+          )
+    }
+
+  def toProto(a: Account): state.Account = state.Account(
+    publicKey = toProto(a.publicKey).some,
     mainPurse = toProto(Key.URef(a.mainPurse)).value.uref,
     namedKeys = toProto(a.namedKeys),
     associatedKeys = a.associatedKeys.toSeq.map {
       case (k, w) =>
-        state.Account.AssociatedKey(
-          k match {
-            case PublicKey.ED25519(publicKey) =>
-              Some(
-                state
-                  .PublicKey()
-                  .withEd25519(
-                    state.Ed25519().withPublicKey(ByteString.copyFrom(publicKey.bytes.toArray))
-                  )
-              )
-          },
-          w.toInt
-        )
+        state.Account.AssociatedKey(toProto(k).some, w.toInt)
     },
     actionThresholds = Some(
       state.Account
