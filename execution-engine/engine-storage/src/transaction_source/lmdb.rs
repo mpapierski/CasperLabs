@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use engine_shared::lmdb_ext::EnvironmentExt;
 use lmdb::{self, Database, Environment, RoTransaction, RwTransaction, WriteFlags};
 
 use crate::{
@@ -83,6 +84,26 @@ impl LmdbEnvironment {
     }
 }
 
+/// Creates a transaction object using provided function and handles a resized map error
+/// transparently.
+fn create_retried_txn<T: lmdb::Transaction>(
+    env: &Environment,
+    begin_fn: impl Fn() -> Result<T, lmdb::Error>,
+) -> Result<T, lmdb::Error> {
+    loop {
+        match begin_fn() {
+            Ok(txn) => return Ok(txn),
+            Err(lmdb::Error::MapResized) => {
+                // Map size is increased by another process. Call `mdb_env_set_mapsize` with
+                // zero to to adopt to the new size, and then the whole operation is retried.
+                env.set_map_size(0)?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 impl<'a> TransactionSource<'a> for LmdbEnvironment {
     type Error = lmdb::Error;
 
@@ -92,11 +113,11 @@ impl<'a> TransactionSource<'a> for LmdbEnvironment {
 
     type ReadWriteTransaction = RwTransaction<'a>;
 
-    fn create_read_txn(&'a self) -> Result<RoTransaction<'a>, Self::Error> {
-        self.env.begin_ro_txn()
+    fn create_read_txn(&'a self) -> Result<Self::ReadTransaction, Self::Error> {
+        create_retried_txn(&self.env, || self.env.begin_ro_txn())
     }
 
     fn create_read_write_txn(&'a self) -> Result<RwTransaction<'a>, Self::Error> {
-        self.env.begin_rw_txn()
+        create_retried_txn(&self.env, || self.env.begin_rw_txn())
     }
 }
