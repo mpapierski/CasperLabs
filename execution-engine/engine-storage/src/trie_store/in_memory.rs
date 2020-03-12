@@ -99,9 +99,7 @@
 //! ```
 
 use super::*;
-use crate::{
-    error::in_memory::Error, transaction_source::in_memory::InMemoryEnvironment, trie_store,
-};
+use crate::{transaction_source::in_memory::InMemoryEnvironment, trie_store};
 
 /// An in-memory trie store.
 pub struct InMemoryTrieStore {
@@ -120,8 +118,6 @@ impl InMemoryTrieStore {
 }
 
 impl<K, V> Store<Blake2bHash, Trie<K, V>> for InMemoryTrieStore {
-    type Error = Error;
-
     type Handle = Option<String>;
 
     fn handle(&self) -> Self::Handle {

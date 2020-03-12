@@ -10,6 +10,7 @@ use engine_shared::{
 use types::bytesrepr::{self, FromBytes, ToBytes};
 
 use crate::{
+    error,
     transaction_source::{Readable, Writable},
     trie::{self, Parents, Pointer, Trie, RADIX},
     trie_store::TrieStore,
@@ -36,20 +37,19 @@ pub enum ReadResult<V> {
 }
 
 /// Returns a value from the corresponding key at a given root in a given store
-pub fn read<K, V, T, S, E>(
+pub fn read<K, V, T, S>(
     correlation_id: CorrelationId,
     txn: &T,
     store: &S,
     root: &Blake2bHash,
     key: &K,
-) -> Result<ReadResult<V>, E>
+) -> Result<ReadResult<V>, error::Error>
 where
     K: ToBytes + FromBytes + Eq + std::fmt::Debug,
     V: ToBytes + FromBytes,
     T: Readable<Handle = S::Handle>,
+    error::Error: From<T::Error>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
 {
     let path: Vec<u8> = key.to_bytes()?;
 
@@ -214,20 +214,19 @@ impl<K, V> TrieScan<K, V> {
 /// A scan consists of the deepest trie variant found at that key, a.k.a. the
 /// "tip", along the with the parents of that variant. Parents are ordered by
 /// their depth from the root (shallow to deep).
-fn scan<K, V, T, S, E>(
+fn scan<K, V, T, S>(
     correlation_id: CorrelationId,
     txn: &T,
     store: &S,
     key_bytes: &[u8],
     root: &Trie<K, V>,
-) -> Result<TrieScan<K, V>, E>
+) -> Result<TrieScan<K, V>, error::Error>
 where
     K: ToBytes + FromBytes + Clone,
     V: ToBytes + FromBytes + Clone,
     T: Readable<Handle = S::Handle>,
+    error::Error: From<T::Error>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
 {
     let start = Instant::now();
     let mut get_counter: i32 = 0;
@@ -618,21 +617,20 @@ pub enum WriteResult {
     RootNotFound,
 }
 
-pub fn write<K, V, T, S, E>(
+pub fn write<K, V, T, S>(
     correlation_id: CorrelationId,
     txn: &mut T,
     store: &S,
     root: &Blake2bHash,
     key: &K,
     value: &V,
-) -> Result<WriteResult, E>
+) -> Result<WriteResult, error::Error>
 where
     K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
     V: ToBytes + FromBytes + Clone + Eq,
     T: Readable<Handle = S::Handle> + Writable<Handle = S::Handle>,
+    error::Error: From<T::Error>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error>,
-    E: From<S::Error> + From<types::bytesrepr::Error>,
 {
     let start = Instant::now();
     let mut put_counter: i32 = 0;
@@ -646,7 +644,7 @@ where
             };
             let path: Vec<u8> = key.to_bytes()?;
             let TrieScan { tip, parents } =
-                scan::<K, V, T, S, E>(correlation_id, txn, store, &path, &current_root)?;
+                scan::<K, V, T, S>(correlation_id, txn, store, &path, &current_root)?;
             let new_elements: Vec<(Blake2bHash, Trie<K, V>)> = match tip {
                 // If the "tip" is the same as the new leaf, then the leaf
                 // is already in the Trie.
@@ -731,11 +729,11 @@ where
     }
 }
 
-enum KeysIteratorState<K, V, S: TrieStore<K, V>> {
+enum KeysIteratorState {
     /// Iterate normally
     Ok,
     /// Return the error and stop iterating
-    ReturnError(S::Error),
+    ReturnError(error::Error),
     /// Already failed, only return None
     Failed,
 }
@@ -745,7 +743,7 @@ pub struct KeysIterator<'a, 'b, K, V, T, S: TrieStore<K, V>> {
     visited: Vec<(Trie<K, V>, Option<usize>, Vec<u8>)>,
     store: &'a S,
     txn: &'b T,
-    state: KeysIteratorState<K, V, S>,
+    state: KeysIteratorState,
 }
 
 impl<'a, 'b, K, V, T, S> Iterator for KeysIterator<'a, 'b, K, V, T, S>
@@ -753,10 +751,10 @@ where
     K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
     V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
     T: Readable<Handle = S::Handle>,
+    error::Error: From<T::Error>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error> + From<types::bytesrepr::Error>,
 {
-    type Item = Result<K, S::Error>;
+    type Item = Result<K, error::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match mem::replace(&mut self.state, KeysIteratorState::Ok) {
@@ -847,8 +845,8 @@ where
     K: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
     V: ToBytes + FromBytes + Clone + Eq + std::fmt::Debug,
     T: Readable<Handle = S::Handle>,
+    error::Error: From<T::Error>,
     S: TrieStore<K, V>,
-    S::Error: From<T::Error>,
 {
     #[allow(clippy::type_complexity)]
     let (visited, init_state): (Vec<(Trie<K, V>, Option<usize>, Vec<u8>)>, _) =

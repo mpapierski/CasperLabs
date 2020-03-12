@@ -7,6 +7,7 @@ use tempfile::tempdir;
 
 use super::TestData;
 use crate::{
+    error,
     store::Store,
     transaction_source::{
         in_memory::InMemoryEnvironment, lmdb::LmdbEnvironment, Transaction, TransactionSource,
@@ -57,14 +58,25 @@ fn lmdb_writer_mutex_does_not_collide_with_readers() {
         }));
     }
 
-    let mut txn = env.create_read_write_txn().unwrap();
     // wait for reader threads to read
-    barrier.wait();
-    store.put(&mut txn, &leaf_1_hash, &leaf_1).unwrap();
-    txn.commit().unwrap();
+    loop {
+        let mut txn = env.create_read_write_txn().unwrap();
+        match store.put(&mut txn, &leaf_1_hash, &leaf_1) {
+            Ok(_) => {
+                barrier.wait();
+                txn.commit().expect("should commit");
+                break;
+            }
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                txn.abort();
+                env.grow_map_size().expect("should grow map size");
+                continue;
+            }
+            Err(e) => panic!("{:?}", e),
+        }
+    }
     // sync with reader threads
     barrier.wait();
-
     assert!(handles.into_iter().all(|b| b.join().unwrap()))
 }
 
@@ -72,7 +84,7 @@ fn lmdb_writer_mutex_does_not_collide_with_readers() {
 fn in_memory_writer_mutex_does_not_collide_with_readers() {
     let env = Arc::new(InMemoryEnvironment::new());
     let store = Arc::new(InMemoryTrieStore::new(&env, None));
-    let num_threads = 10;
+    let num_threads = 1;
     let barrier = Arc::new(Barrier::new(num_threads + 1));
     let mut handles = Vec::new();
     let TestData(ref leaf_1_hash, ref leaf_1) = &super::create_data()[0..1][0];

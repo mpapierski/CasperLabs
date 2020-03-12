@@ -1,7 +1,6 @@
 use types::ProtocolVersion;
 
 use crate::{
-    error::in_memory::Error,
     protocol_data::ProtocolData,
     protocol_data_store::{self, ProtocolDataStore},
     store::Store,
@@ -25,7 +24,6 @@ impl InMemoryProtocolDataStore {
 }
 
 impl Store<ProtocolVersion, ProtocolData> for InMemoryProtocolDataStore {
-    type Error = Error;
     type Handle = Option<String>;
 
     fn handle(&self) -> Self::Handle {

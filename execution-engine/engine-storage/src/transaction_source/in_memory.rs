@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
-    sync::{self, Arc, Mutex, MutexGuard},
+    fmt,
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 use crate::{
@@ -15,8 +16,6 @@ struct WriteCapability;
 type WriteLock<'a> = MutexGuard<'a, WriteCapability>;
 
 type BytesMap = HashMap<Vec<u8>, Vec<u8>>;
-
-type PoisonError<'a> = sync::PoisonError<MutexGuard<'a, HashMap<Option<String>, BytesMap>>>;
 
 /// A read transaction for the in-memory trie store.
 pub struct InMemoryReadTransaction {
@@ -113,6 +112,16 @@ pub struct InMemoryEnvironment {
     write_mutex: Arc<Mutex<WriteCapability>>,
 }
 
+impl fmt::Debug for InMemoryEnvironment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "InMemoryEnvironment {{ data: {:?}, write_mutex: {{ ... }} }}",
+            self.data
+        )
+    }
+}
+
 impl Default for InMemoryEnvironment {
     fn default() -> Self {
         let data = {
@@ -130,7 +139,7 @@ impl InMemoryEnvironment {
         Default::default()
     }
 
-    pub fn data(&self, name: Option<&str>) -> Result<Option<BytesMap>, PoisonError> {
+    pub fn data(&self, name: Option<&str>) -> Result<Option<BytesMap>, Error> {
         let data = self.data.lock()?;
         let name = name.map(ToString::to_string);
         let ret = data.get(&name).cloned();

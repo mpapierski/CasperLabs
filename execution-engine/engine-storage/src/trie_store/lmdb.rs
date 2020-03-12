@@ -131,13 +131,13 @@ impl LmdbTrieStore {
         flags: DatabaseFlags,
     ) -> Result<Self, error::Error> {
         let name = Self::name(maybe_name);
-        let db = env.env().create_db(Some(&name), flags)?;
+        let db = env.create_db(Some(&name), flags)?;
         Ok(LmdbTrieStore { db })
     }
 
     pub fn open(env: &LmdbEnvironment, maybe_name: Option<&str>) -> Result<Self, error::Error> {
         let name = Self::name(maybe_name);
-        let db = env.env().open_db(Some(&name))?;
+        let db = env.open_db(Some(&name))?;
         Ok(LmdbTrieStore { db })
     }
 
@@ -149,8 +149,6 @@ impl LmdbTrieStore {
 }
 
 impl<K, V> Store<Blake2bHash, Trie<K, V>> for LmdbTrieStore {
-    type Error = error::Error;
-
     type Handle = Database;
 
     fn handle(&self) -> Self::Handle {

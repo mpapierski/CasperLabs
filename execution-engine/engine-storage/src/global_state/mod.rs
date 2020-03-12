@@ -14,6 +14,7 @@ use engine_shared::{
 use types::{account::PublicKey, bytesrepr, Key, ProtocolVersion, U512};
 
 use crate::{
+    error,
     protocol_data::ProtocolData,
     transaction_source::{Transaction, TransactionSource},
     trie::Trie,
@@ -114,18 +115,17 @@ pub trait StateProvider {
     fn empty_root(&self) -> Blake2bHash;
 }
 
-pub fn commit<'a, R, S, H, E>(
+pub fn commit<'a, R, S, H>(
     environment: &'a R,
     store: &S,
     correlation_id: CorrelationId,
     prestate_hash: Blake2bHash,
     effects: AdditiveMap<Key, Transform, H>,
-) -> Result<CommitResult, E>
+) -> Result<CommitResult, error::Error>
 where
     R: TransactionSource<'a, Handle = S::Handle>,
+    error::Error: From<R::Error>,
     S: TrieStore<Key, StoredValue>,
-    S::Error: From<R::Error>,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
     H: BuildHasher,
 {
     let mut txn = environment.create_read_write_txn()?;
@@ -142,7 +142,7 @@ where
     let mut writes: i32 = 0;
 
     for (key, transform) in effects.into_iter() {
-        let read_result = read::<_, _, _, _, E>(correlation_id, &txn, store, &state_root, &key)?;
+        let read_result = read(correlation_id, &txn, store, &state_root, &key)?;
 
         log_duration(
             correlation_id,
@@ -165,8 +165,7 @@ where
             _x @ (ReadResult::RootNotFound, _) => panic!(stringify!(_x._1)),
         };
 
-        let write_result =
-            write::<_, _, _, _, E>(correlation_id, &mut txn, store, &state_root, &key, &value)?;
+        let write_result = write(correlation_id, &mut txn, store, &state_root, &key, &value)?;
 
         log_duration(
             correlation_id,

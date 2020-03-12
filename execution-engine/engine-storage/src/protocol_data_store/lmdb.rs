@@ -24,13 +24,13 @@ impl LmdbProtocolDataStore {
         flags: DatabaseFlags,
     ) -> Result<Self, error::Error> {
         let name = Self::name(maybe_name);
-        let db = env.env().create_db(Some(&name), flags)?;
+        let db = env.create_db(Some(&name), flags)?;
         Ok(LmdbProtocolDataStore { db })
     }
 
     pub fn open(env: &LmdbEnvironment, maybe_name: Option<&str>) -> Result<Self, error::Error> {
         let name = Self::name(maybe_name);
-        let db = env.env().open_db(Some(&name))?;
+        let db = env.open_db(Some(&name))?;
         Ok(LmdbProtocolDataStore { db })
     }
 
@@ -42,8 +42,6 @@ impl LmdbProtocolDataStore {
 }
 
 impl Store<ProtocolVersion, ProtocolData> for LmdbProtocolDataStore {
-    type Error = error::Error;
-
     type Handle = Database;
 
     fn handle(&self) -> Self::Handle {

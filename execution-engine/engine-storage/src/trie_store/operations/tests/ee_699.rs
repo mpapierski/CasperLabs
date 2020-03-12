@@ -307,10 +307,7 @@ mod empty_tries {
     use engine_shared::newtypes::CorrelationId;
 
     use super::*;
-    use crate::{
-        error::in_memory,
-        trie_store::operations::tests::{self, InMemoryTestContext},
-    };
+    use crate::trie_store::operations::tests::{self, InMemoryTestContext};
 
     #[test]
     fn in_memory_writes_to_n_leaf_empty_trie_had_expected_results() {
@@ -319,13 +316,7 @@ mod empty_tries {
         let context = InMemoryTestContext::new(&tries).unwrap();
         let initial_states = vec![root_hash];
 
-        let _states = tests::writes_to_n_leaf_empty_trie_had_expected_results::<
-            _,
-            _,
-            _,
-            _,
-            in_memory::Error,
-        >(
+        let _states = tests::writes_to_n_leaf_empty_trie_had_expected_results(
             correlation_id,
             &context.environment,
             &context.store,
@@ -355,10 +346,7 @@ mod proptests {
     }
 
     use super::*;
-    use crate::{
-        error::{self, in_memory},
-        trie_store::operations::tests::{self, InMemoryTestContext, LmdbTestContext},
-    };
+    use crate::trie_store::operations::tests::{self, InMemoryTestContext, LmdbTestContext};
     use std::ops::RangeInclusive;
 
     fn lmdb_roundtrip_succeeds(pairs: &[(TestKey, TestValue)]) -> bool {
@@ -367,7 +355,7 @@ mod proptests {
         let context = LmdbTestContext::new(&tries).unwrap();
         let mut states_to_check = vec![];
 
-        let root_hashes = tests::write_pairs::<_, _, _, _, error::Error>(
+        let root_hashes = tests::write_pairs(
             correlation_id,
             &context.environment,
             &context.store,
@@ -378,7 +366,7 @@ mod proptests {
 
         states_to_check.extend(root_hashes);
 
-        tests::check_pairs::<_, _, _, _, error::Error>(
+        tests::check_pairs(
             correlation_id,
             &context.environment,
             &context.store,
@@ -394,7 +382,7 @@ mod proptests {
         let context = InMemoryTestContext::new(&tries).unwrap();
         let mut states_to_check = vec![];
 
-        let root_hashes = tests::write_pairs::<_, _, _, _, in_memory::Error>(
+        let root_hashes = tests::write_pairs(
             correlation_id,
             &context.environment,
             &context.store,
@@ -405,7 +393,7 @@ mod proptests {
 
         states_to_check.extend(root_hashes);
 
-        tests::check_pairs::<_, _, _, _, in_memory::Error>(
+        tests::check_pairs(
             correlation_id,
             &context.environment,
             &context.store,

@@ -9,7 +9,7 @@ use engine_shared::{
 use types::{Key, ProtocolVersion};
 
 use crate::{
-    error::{self, in_memory},
+    error,
     global_state::{commit, CommitResult, StateProvider, StateReader},
     protocol_data::ProtocolData,
     protocol_data_store::in_memory::InMemoryProtocolDataStore,
@@ -87,10 +87,10 @@ impl InMemoryGlobalState {
             let mut txn = state.environment.create_read_write_txn()?;
             for (key, value) in pairs {
                 let key = key.normalize();
-                match operations::write::<_, _, _, InMemoryTrieStore, in_memory::Error>(
+                match operations::write(
                     correlation_id,
                     &mut txn,
-                    &state.trie_store,
+                    state.trie_store.deref(),
                     &current_root,
                     &key,
                     value,
@@ -117,13 +117,7 @@ impl StateReader<Key, StoredValue> for InMemoryGlobalStateView {
         key: &Key,
     ) -> Result<Option<StoredValue>, Self::Error> {
         let txn = self.environment.create_read_txn()?;
-        let ret = match read::<
-            Key,
-            StoredValue,
-            InMemoryReadTransaction,
-            InMemoryTrieStore,
-            Self::Error,
-        >(
+        let ret = match read::<Key, StoredValue, InMemoryReadTransaction, InMemoryTrieStore>(
             correlation_id,
             &txn,
             self.store.deref(),
@@ -163,9 +157,9 @@ impl StateProvider for InMemoryGlobalState {
         prestate_hash: Blake2bHash,
         effects: AdditiveMap<Key, Transform>,
     ) -> Result<CommitResult, Self::Error> {
-        let commit_result = commit::<InMemoryEnvironment, InMemoryTrieStore, _, Self::Error>(
-            &self.environment,
-            &self.trie_store,
+        let commit_result = commit(
+            self.environment.deref(),
+            self.trie_store.deref(),
             correlation_id,
             prestate_hash,
             effects,

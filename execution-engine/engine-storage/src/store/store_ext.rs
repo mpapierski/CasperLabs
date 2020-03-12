@@ -1,6 +1,7 @@
 use types::bytesrepr::{FromBytes, ToBytes};
 
 use crate::{
+    error,
     store::Store,
     transaction_source::{Readable, Writable},
 };
@@ -10,12 +11,12 @@ pub trait StoreExt<K, V>: Store<K, V> {
         &self,
         txn: &T,
         keys: impl Iterator<Item = &'a K>,
-    ) -> Result<Vec<Option<V>>, Self::Error>
+    ) -> Result<Vec<Option<V>>, error::Error>
     where
         T: Readable<Handle = Self::Handle>,
+        error::Error: From<T::Error>,
         K: ToBytes + 'a,
         V: FromBytes,
-        Self::Error: From<T::Error>,
     {
         let mut ret: Vec<Option<V>> = Vec::new();
         for key in keys {
@@ -29,12 +30,12 @@ pub trait StoreExt<K, V>: Store<K, V> {
         &self,
         txn: &mut T,
         pairs: impl Iterator<Item = (&'a K, &'a V)>,
-    ) -> Result<(), Self::Error>
+    ) -> Result<(), error::Error>
     where
         T: Writable<Handle = Self::Handle>,
+        error::Error: From<T::Error>,
         K: ToBytes + 'a,
         V: ToBytes + 'a,
-        Self::Error: From<T::Error>,
     {
         for (key, value) in pairs {
             self.put(txn, key, value)?;

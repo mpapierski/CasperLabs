@@ -55,8 +55,8 @@ use crate::internal::utils;
 
 /// LMDB initial map size is calculated based on DEFAULT_LMDB_PAGES and systems page size.
 ///
-/// This default value should give 50MiB initial map size by default.
-const DEFAULT_LMDB_PAGES: usize = 128_000;
+/// This default value should give 1MiB initial map size by default.
+const DEFAULT_LMDB_PAGES: usize = 256;
 
 /// This is appended to the data dir path provided to the `LmdbWasmTestBuilder` in order to match
 /// the behavior of `get_data_dir()` in "engine-grpc-server/src/main.rs".
@@ -184,7 +184,7 @@ impl LmdbWasmTestBuilder {
         let page_size = get_page_size().expect("should get page size");
         let global_state_dir = Self::create_and_get_global_state_dir(data_dir);
         let environment = Arc::new(
-            LmdbEnvironment::new(&global_state_dir, page_size * DEFAULT_LMDB_PAGES)
+            LmdbEnvironment::new(&global_state_dir, page_size)
                 .expect("should create LmdbEnvironment"),
         );
         let trie_store = Arc::new(

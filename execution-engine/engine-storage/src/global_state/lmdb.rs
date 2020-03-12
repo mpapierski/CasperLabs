@@ -45,9 +45,27 @@ impl LmdbGlobalState {
     ) -> Result<Self, error::Error> {
         let root_hash: Blake2bHash = {
             let (root_hash, root) = create_hashed_empty_trie::<Key, StoredValue>()?;
-            let mut txn = environment.create_read_write_txn()?;
-            trie_store.put(&mut txn, &root_hash, &root)?;
-            txn.commit()?;
+            loop {
+                let mut txn = environment.create_read_write_txn()?;
+                match trie_store.put(&mut txn, &root_hash, &root) {
+                    Ok(_) => {}
+                    Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                        txn.abort();
+                        environment.grow_map_size()?;
+                        continue;
+                    }
+                    Err(e) => return Err(e),
+                }
+
+                match txn.commit() {
+                    Ok(_) => break,
+                    Err(e) if e.is_map_full() => {
+                        environment.grow_map_size()?;
+                        continue;
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
             root_hash
         };
         Ok(LmdbGlobalState::new(
@@ -83,20 +101,35 @@ impl StateReader<Key, StoredValue> for LmdbGlobalStateView {
         correlation_id: CorrelationId,
         key: &Key,
     ) -> Result<Option<StoredValue>, Self::Error> {
-        let txn = self.environment.create_read_txn()?;
-        let ret = match read::<Key, StoredValue, lmdb::RoTransaction, LmdbTrieStore, Self::Error>(
-            correlation_id,
-            &txn,
-            self.store.deref(),
-            &self.root_hash,
-            key,
-        )? {
-            ReadResult::Found(value) => Some(value),
-            ReadResult::NotFound => None,
-            ReadResult::RootNotFound => panic!("LmdbGlobalState has invalid root"),
-        };
-        txn.commit()?;
-        Ok(ret)
+        loop {
+            let txn = self.environment.create_read_txn()?;
+
+            let ret = match read::<Key, StoredValue, lmdb::RoTransaction, LmdbTrieStore>(
+                correlation_id,
+                &txn,
+                self.store.deref(),
+                &self.root_hash,
+                key,
+            ) {
+                Ok(ReadResult::Found(value)) => Some(value),
+                Ok(ReadResult::NotFound) => None,
+                Ok(ReadResult::RootNotFound) => panic!("LmdbGlobalState has invalid root"),
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    txn.abort();
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            };
+            match txn.commit() {
+                Ok(_) => return Ok(ret),
+                Err(e) if e.is_map_full() => {
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
     }
 }
 
@@ -106,15 +139,35 @@ impl StateProvider for LmdbGlobalState {
     type Reader = LmdbGlobalStateView;
 
     fn checkout(&self, state_hash: Blake2bHash) -> Result<Option<Self::Reader>, Self::Error> {
-        let txn = self.environment.create_read_txn()?;
-        let maybe_root: Option<Trie<Key, StoredValue>> = self.trie_store.get(&txn, &state_hash)?;
-        let maybe_state = maybe_root.map(|_| LmdbGlobalStateView {
-            environment: Arc::clone(&self.environment),
-            store: Arc::clone(&self.trie_store),
-            root_hash: state_hash,
-        });
-        txn.commit()?;
-        Ok(maybe_state)
+        loop {
+            let txn = self.environment.create_read_txn()?;
+
+            let maybe_root_res: Result<Option<Trie<Key, StoredValue>>, Self::Error> =
+                self.trie_store.get(&txn, &state_hash);
+            match maybe_root_res {
+                Ok(maybe_root) => {
+                    let maybe_state = maybe_root.map(|_| LmdbGlobalStateView {
+                        environment: Arc::clone(&self.environment),
+                        store: Arc::clone(&self.trie_store),
+                        root_hash: state_hash,
+                    });
+                    match txn.commit() {
+                        Ok(_) => return Ok(maybe_state),
+                        Err(e) if e.is_map_full() => {
+                            self.environment.grow_map_size()?;
+                            continue;
+                        }
+                        Err(e) => return Err(e.into()),
+                    }
+                }
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    txn.abort();
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
     }
 
     fn commit(
@@ -123,14 +176,23 @@ impl StateProvider for LmdbGlobalState {
         prestate_hash: Blake2bHash,
         effects: AdditiveMap<Key, Transform>,
     ) -> Result<CommitResult, Self::Error> {
-        let commit_result = commit::<LmdbEnvironment, LmdbTrieStore, _, Self::Error>(
-            &self.environment,
-            &self.trie_store,
-            correlation_id,
-            prestate_hash,
-            effects,
-        )?;
-        Ok(commit_result)
+        loop {
+            match commit::<LmdbEnvironment, LmdbTrieStore, _>(
+                &self.environment,
+                &self.trie_store,
+                correlation_id,
+                prestate_hash,
+                effects.clone(),
+            ) {
+                Ok(result) => return Ok(result),
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    // Abort is already called when a TX object is destroyed
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
     }
 
     fn put_protocol_data(
@@ -138,20 +200,55 @@ impl StateProvider for LmdbGlobalState {
         protocol_version: ProtocolVersion,
         protocol_data: &ProtocolData,
     ) -> Result<(), Self::Error> {
-        let mut txn = self.environment.create_read_write_txn()?;
-        self.protocol_data_store
-            .put(&mut txn, &protocol_version, protocol_data)?;
-        txn.commit().map_err(Into::into)
+        loop {
+            let mut txn = self.environment.create_read_write_txn()?;
+            match self
+                .protocol_data_store
+                .put(&mut txn, &protocol_version, protocol_data)
+            {
+                Ok(_) => {}
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    txn.abort();
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+
+            match txn.commit() {
+                Ok(_) => return Ok(()),
+                Err(e) if e.is_map_full() => {
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
     }
 
     fn get_protocol_data(
         &self,
         protocol_version: ProtocolVersion,
     ) -> Result<Option<ProtocolData>, Self::Error> {
-        let txn = self.environment.create_read_txn()?;
-        let result = self.protocol_data_store.get(&txn, &protocol_version)?;
-        txn.commit()?;
-        Ok(result)
+        loop {
+            let txn = self.environment.create_read_txn()?;
+            let result = match self.protocol_data_store.get(&txn, &protocol_version) {
+                Ok(result) => result,
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            };
+            match txn.commit() {
+                Ok(_) => return Ok(result),
+                Err(e) if e.is_map_full() => {
+                    self.environment.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
     }
 
     fn empty_root(&self) -> Blake2bHash {
@@ -226,10 +323,10 @@ mod tests {
             let mut txn = ret.environment.create_read_write_txn().unwrap();
 
             for TestPair { key, value } in &create_test_pairs() {
-                match write::<_, _, _, LmdbTrieStore, error::Error>(
+                match write(
                     correlation_id,
                     &mut txn,
-                    &ret.trie_store,
+                    ret.trie_store.deref(),
                     &current_root,
                     key,
                     value,

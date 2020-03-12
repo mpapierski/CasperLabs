@@ -16,9 +16,7 @@ pub trait Transaction: Sized {
     /// Aborts the transaction.
     ///
     /// Any pending operations will not be saved.
-    fn abort(self) {
-        unimplemented!("Abort operations should be performed in Drop implementations.")
-    }
+    fn abort(self) {}
 }
 
 /// A transaction with the capability to read from a given [`Handle`](Transaction::Handle).
@@ -55,4 +53,9 @@ pub trait TransactionSource<'a> {
 
     /// Creates a read-write transaction.
     fn create_read_write_txn(&'a self) -> Result<Self::ReadWriteTransaction, Self::Error>;
+
+    /// Grows map size
+    fn grow_map_size(&self) -> Result<(), Self::Error> {
+        unimplemented!();
+    }
 }

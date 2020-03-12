@@ -53,7 +53,7 @@ impl EnvironmentExt for Environment {
 mod tests {
     use super::*;
     use lmdb::{self, Environment, Transaction, WriteFlags};
-    use std::{path::Path, thread, time::Instant};
+    use std::{path::Path, thread};
 
     const DEFAULT_MAP_SIZE: usize = 1024 * 1024;
     const TEST_KEY_LENGTH: usize = 32;
@@ -69,31 +69,16 @@ mod tests {
 
         for val in 0..255 {
             let test_val = vec![val as u8; 1024 * 1024];
-            eprintln!("val {:?}", val);
             let mut test_key = vec![val; TEST_KEY_LENGTH];
             debug_assert!(thread_no <= 255);
             test_key[0] = thread_no as u8;
 
-            let now = Instant::now();
             for i in 1.. {
-                eprintln!("begin rw txn i={}...", i);
                 let mut txn = None;
-                for retry in 0.. {
+                for _retry in 0.. {
                     txn = match env.begin_rw_txn() {
-                        Ok(txn) => {
-                            if retry > 0 {
-                                println!(
-                                    "thread {} val {} tx {} retries succeed in {}",
-                                    thread_no,
-                                    val,
-                                    retry,
-                                    now.elapsed().as_millis()
-                                );
-                            }
-                            Some(txn)
-                        }
+                        Ok(txn) => Some(txn),
                         Err(lmdb::Error::MapResized) => {
-                            println!("thread {} val {} tx retry {}", thread_no, val, retry);
                             env.set_map_size(0).expect("should set map size to 0");
                             continue;
                         }
@@ -102,21 +87,13 @@ mod tests {
                     break;
                 }
 
-                eprintln!("begin rw txn i={} done", i);
                 let mut txn = txn.unwrap();
                 match txn.put(db, &test_key, &test_val, WriteFlags::empty()) {
-                    Ok(_) => {
-                        eprintln!("commit i={}", i);
-                        txn.commit().unwrap();
-                        eprintln!("commit i={} done", i);
-                        break;
-                    }
+                    Ok(_) => txn.commit().unwrap(),
                     Err(lmdb::Error::MapFull) => {
                         txn.abort();
                         map_size *= 2;
-                        eprintln!("Test1: resizing to {} i={}", map_size, i);
                         env.set_map_size(map_size).unwrap();
-                        eprintln!("Test1: resized to {:?}", map_size);
                         continue;
                     }
                     e => {

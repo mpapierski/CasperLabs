@@ -28,7 +28,7 @@ fn lmdb_roundtrip_succeeds(pairs: &[(TestKey, TestValue)]) -> bool {
     let context = LmdbTestContext::new(&tries).unwrap();
     let mut states_to_check = vec![];
 
-    let root_hashes = write_pairs::<_, _, _, _, error::Error>(
+    let root_hashes = write_pairs(
         correlation_id,
         &context.environment,
         &context.store,
@@ -39,7 +39,7 @@ fn lmdb_roundtrip_succeeds(pairs: &[(TestKey, TestValue)]) -> bool {
 
     states_to_check.extend(root_hashes);
 
-    check_pairs::<_, _, _, _, error::Error>(
+    check_pairs(
         correlation_id,
         &context.environment,
         &context.store,
@@ -55,7 +55,7 @@ fn in_memory_roundtrip_succeeds(pairs: &[(TestKey, TestValue)]) -> bool {
     let context = InMemoryTestContext::new(&tries).unwrap();
     let mut states_to_check = vec![];
 
-    let root_hashes = write_pairs::<_, _, _, _, in_memory::Error>(
+    let root_hashes = write_pairs(
         correlation_id,
         &context.environment,
         &context.store,
@@ -66,7 +66,7 @@ fn in_memory_roundtrip_succeeds(pairs: &[(TestKey, TestValue)]) -> bool {
 
     states_to_check.extend(root_hashes);
 
-    check_pairs::<_, _, _, _, in_memory::Error>(
+    check_pairs(
         correlation_id,
         &context.environment,
         &context.store,

@@ -2,34 +2,29 @@ use engine_shared::newtypes::Blake2bHash;
 
 use super::*;
 use crate::{
-    error::{self, in_memory},
+    error,
     trie_store::operations::{scan, TrieScan},
 };
 
-fn check_scan<'a, R, S, E>(
+fn check_scan<'a, R, S>(
     correlation_id: CorrelationId,
     environment: &'a R,
     store: &S,
     root_hash: &Blake2bHash,
     key: &[u8],
-) -> Result<(), E>
+) -> Result<(), error::Error>
 where
     R: TransactionSource<'a, Handle = S::Handle>,
     S: TrieStore<TestKey, TestValue>,
-    S::Error: From<R::Error> + std::fmt::Debug,
-    E: From<R::Error> + From<S::Error> + From<types::bytesrepr::Error>,
+    R::Error: Into<error::Error>,
+    error::Error: From<R::Error>,
 {
     let txn: R::ReadTransaction = environment.create_read_txn()?;
     let root = store
         .get(&txn, &root_hash)?
         .expect("check_scan received an invalid root hash");
-    let TrieScan { mut tip, parents } = scan::<TestKey, TestValue, R::ReadTransaction, S, E>(
-        correlation_id,
-        &txn,
-        store,
-        key,
-        &root,
-    )?;
+    let TrieScan { mut tip, parents } =
+        scan::<TestKey, TestValue, R::ReadTransaction, S>(correlation_id, &txn, store, key, &root)?;
 
     for (index, parent) in parents.into_iter().rev() {
         let expected_tip_hash = {
@@ -67,7 +62,7 @@ mod partial_tries {
 
             for leaf in TEST_LEAVES.iter() {
                 let leaf_bytes = leaf.to_bytes().unwrap();
-                check_scan::<_, _, error::Error>(
+                check_scan(
                     correlation_id,
                     &context.environment,
                     &context.store,
@@ -88,7 +83,7 @@ mod partial_tries {
 
             for leaf in TEST_LEAVES.iter() {
                 let leaf_bytes = leaf.to_bytes().unwrap();
-                check_scan::<_, _, in_memory::Error>(
+                check_scan(
                     correlation_id,
                     &context.environment,
                     &context.store,
@@ -118,7 +113,7 @@ mod full_tries {
             for state in &states[..state_index] {
                 for leaf in TEST_LEAVES.iter() {
                     let leaf_bytes = leaf.to_bytes().unwrap();
-                    check_scan::<_, _, error::Error>(
+                    check_scan(
                         correlation_id,
                         &context.environment,
                         &context.store,
@@ -145,7 +140,7 @@ mod full_tries {
             for state in &states[..state_index] {
                 for leaf in TEST_LEAVES.iter() {
                     let leaf_bytes = leaf.to_bytes().unwrap();
-                    check_scan::<_, _, in_memory::Error>(
+                    check_scan(
                         correlation_id,
                         &context.environment,
                         &context.store,
