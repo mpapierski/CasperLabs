@@ -163,4 +163,8 @@ impl<'a> TransactionSource<'a> for InMemoryEnvironment {
     fn create_read_write_txn(&'a self) -> Result<InMemoryReadWriteTransaction<'a>, Self::Error> {
         InMemoryReadWriteTransaction::new(self).map_err(Into::into)
     }
+
+    fn grow_map_size(&self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }

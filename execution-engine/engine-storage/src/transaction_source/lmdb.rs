@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
-use engine_shared::lmdb_ext::EnvironmentExt;
 use lmdb::{
     self as lmdb_external, Database, DatabaseFlags, Environment, RoTransaction, RwTransaction,
     WriteFlags,
 };
+
+use engine_shared::lmdb_ext::EnvironmentExt;
 
 use crate::{
     error::lmdb::Error,

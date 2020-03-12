@@ -19,9 +19,9 @@ const MAX_DBS: u32 = 2;
 #[cfg(test)]
 lazy_static! {
     static ref TEST_MAP_SIZE: usize = {
-        // Default test map size should be around ~1MiB which is also default uses LMDB by default.
+        // Default test map size should be around ~10MiB which is also default uses LMDB by default.
         // We choose this default value to also be able to observe MapFull/MapResized error conditions under a load.
         let page_size = engine_shared::os::get_page_size().unwrap();
-        page_size * 256
+        page_size * 2560
     };
 }

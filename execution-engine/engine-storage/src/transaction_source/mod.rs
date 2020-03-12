@@ -55,7 +55,5 @@ pub trait TransactionSource<'a> {
     fn create_read_write_txn(&'a self) -> Result<Self::ReadWriteTransaction, Self::Error>;
 
     /// Grows map size
-    fn grow_map_size(&self) -> Result<(), Self::Error> {
-        unimplemented!();
-    }
+    fn grow_map_size(&self) -> Result<(), Self::Error>;
 }
