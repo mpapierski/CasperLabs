@@ -51,95 +51,37 @@ impl EnvironmentExt for Environment {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use lmdb::{self, Environment, Transaction, WriteFlags};
-    use std::{path::Path, thread};
+    use super::EnvironmentExt;
+    use lmdb::{self, Environment};
 
     const DEFAULT_MAP_SIZE: usize = 1024 * 1024;
-    const TEST_KEY_LENGTH: usize = 32;
 
-    fn test_thread(thread_no: usize, path: &Path) {
-        let mut map_size = DEFAULT_MAP_SIZE;
-        let env = Environment::new()
-            .set_map_size(map_size)
-            .open(path)
-            .unwrap();
-
-        let db = env.open_db(None).unwrap();
-
-        for val in 0..255 {
-            let test_val = vec![val as u8; 1024 * 1024];
-            let mut test_key = vec![val; TEST_KEY_LENGTH];
-            debug_assert!(thread_no <= 255);
-            test_key[0] = thread_no as u8;
-
-            for i in 1.. {
-                let mut txn = None;
-                for _retry in 0.. {
-                    txn = match env.begin_rw_txn() {
-                        Ok(txn) => Some(txn),
-                        Err(lmdb::Error::MapResized) => {
-                            env.set_map_size(0).expect("should set map size to 0");
-                            continue;
-                        }
-                        Err(e) => panic!("should begin rw txn val={} i={}: {:?}", val, i, e),
-                    };
-                    break;
-                }
-
-                let mut txn = txn.unwrap();
-                match txn.put(db, &test_key, &test_val, WriteFlags::empty()) {
-                    Ok(_) => txn.commit().unwrap(),
-                    Err(lmdb::Error::MapFull) => {
-                        txn.abort();
-                        map_size *= 2;
-                        env.set_map_size(map_size).unwrap();
-                        continue;
-                    }
-                    e => {
-                        txn.abort();
-                        e.unwrap()
-                    }
-                }
-            }
-        }
-    }
-
-    use std::sync::Arc;
     #[test]
-    fn should_resize_map() {
-        let mut _map_size = DEFAULT_MAP_SIZE;
-
+    fn should_get_and_set_map_size() {
         let tmp_dir = tempfile::tempdir().unwrap();
         println!("tmp_dir: {:?}", tmp_dir.path());
-        let path = Arc::new(tmp_dir);
 
-        {
-            let mut threads = Vec::new();
+        let env = Environment::new()
+            .set_map_size(DEFAULT_MAP_SIZE)
+            .open(tmp_dir.path())
+            .expect("should open");
 
-            // let path = tmp_dir.clone().path();
-            for thread_no in 0..10 {
-                let p = path.clone();
-                let handle = thread::spawn(move || {
-                    test_thread(thread_no, p.path());
-                });
-                threads.push(handle);
-            }
+        let _db = env.open_db(None).unwrap();
 
-            for l in threads {
-                println!("joining thread");
-                l.join().expect("join failed");
-            }
-            println!("done");
-        }
-
-        {
-            let env = Environment::new().open(path.path()).unwrap();
-
-            let _db = env.open_db(None).unwrap();
-
-            let map_size_actual = env.get_map_size().unwrap();
-            println!("map_size_actual: {}", map_size_actual);
-        }
+        assert_eq!(
+            env.get_map_size().expect("should get map size 1"),
+            DEFAULT_MAP_SIZE
+        );
+        env.set_map_size(DEFAULT_MAP_SIZE * 2)
+            .expect("should set map size");
+        assert_eq!(
+            env.get_map_size().expect("should get map size 2"),
+            DEFAULT_MAP_SIZE * 2
+        );
+        // Opening another handle at this database and verifying the size does not return `map_size
+        // * 2` size as expected. This is due to the fact that the database didn't commit
+        // new size. Writable transaction part is omitted here as we extensively
+        // exercise transaction logic (with properly handled MapResized/MapFull cases) in other
+        // parts of the code.
     }
 }
