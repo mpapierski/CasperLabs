@@ -41,8 +41,14 @@ where
             }
             Err(e) => return Err(e),
         }
-        txn.commit()?;
-        break;
+        match txn.commit().map_err(error::Error::from) {
+            Ok(_) => break,
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                transaction_source.grow_map_size()?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
     }
     Ok(())
 }
@@ -96,8 +102,14 @@ where
 
         let keys = items.iter().map(Into::into).map(|(k, _)| k);
         let ret = store.get_many(&txn, keys)?;
-        txn.commit()?;
-        return Ok(ret);
+        match txn.commit().map_err(error::Error::from) {
+            Ok(_) => return Ok(ret),
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                transaction_source.grow_map_size()?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
     }
 }
 
@@ -213,12 +225,27 @@ where
             }
         }
     }
-    {
+    loop {
         let txn = transaction_source.create_read_txn()?;
         let keys = items.iter().map(|TestData(k, _)| k);
-        let ret = store.get_many(&txn, keys)?;
-        txn.commit()?;
-        Ok(ret)
+        let ret = match store.get_many(&txn, keys) {
+            Ok(ret) => ret,
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                txn.abort();
+                transaction_source.grow_map_size()?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        };
+
+        match txn.commit().map_err(error::Error::from) {
+            Ok(_) => return Ok(ret),
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                transaction_source.grow_map_size()?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
     }
 }
 
@@ -308,8 +335,14 @@ where
                 }
                 Err(e) => return Err(e),
             }
-            write_txn.commit()?;
-            break;
+            match write_txn.commit().map_err(error::Error::from) {
+                Ok(_) => break,
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    env.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
         }
 
         let result = store.get(&read_txn_1, &leaf_1_hash)?;
@@ -365,8 +398,14 @@ where
             }
             Err(e) => return Err(e),
         }
-        write_txn.commit()?;
-        break;
+        match write_txn.commit().map_err(error::Error::from) {
+            Ok(_) => break,
+            Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                env.grow_map_size()?;
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
     }
 
     {
@@ -383,8 +422,14 @@ where
                 }
                 Err(e) => return Err(e),
             }
-            write_txn.commit()?;
-            break;
+            match write_txn.commit().map_err(error::Error::from) {
+                Ok(_) => break,
+                Err(error::Error::Lmdb(e)) if e.is_map_full() => {
+                    env.grow_map_size()?;
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
         }
 
         let result = store.get(&read_txn_1, leaf_1_hash)?;

@@ -698,11 +698,7 @@ where
     'outer: loop {
         let mut results = Vec::new();
         let mut current_root_hash = root_hash.to_owned();
-        let res = environment.create_read_write_txn();
-        let mut txn = match res {
-            Ok(txn) => txn,
-            Err(e) => return Err(e.into()),
-        };
+        let mut txn = environment.create_read_write_txn()?;
 
         for leaf in leaves.iter() {
             if let Trie::Leaf { key, value } = leaf {
