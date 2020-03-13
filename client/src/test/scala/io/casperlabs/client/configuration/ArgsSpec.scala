@@ -1,4 +1,5 @@
 package io.casperlabs.client.configuration
+import scalapb_circe.{JsonFormat, Parser, Printer}
 
 import cats.syntax.option._
 import cats.syntax.either._
@@ -6,7 +7,7 @@ import org.scalatest._
 import io.casperlabs.crypto.codec.Base16
 import io.casperlabs.casper.consensus.Deploy.Arg
 import io.casperlabs.casper.consensus.state
-import io.casperlabs.models.cltype.CLType
+import io.casperlabs.models.cltype.{ByteArray32, CLType, PublicKey}
 import io.casperlabs.models.cltype.protobuf.dsl
 import com.google.protobuf.ByteString
 
@@ -167,13 +168,29 @@ class ArgsSpec extends FlatSpec with Matchers {
           "cl_type" : {"fixed_list_type" : {"inner" : {"simple_type" : "U8"}, "len" : 32}},
           "value" : {"bytes_value" : "$addressHex"}
         }
+      },
+
+      {
+        "name" : "public_key_ed25519",
+        "value" : {
+          "cl_type" : {
+            "simple_type" : "PUBLICKEY"
+          },
+          "value": {
+            "public_key":{
+              "ed25519": {
+                "public_key": "$addressHex"
+              }
+            }
+          }
+        }
       }
     ]
     """
 
     val args = Args.fromJson(json).fold(e => fail(e), identity)
 
-    args should have size 28
+    args should have size 29
     args(0) shouldBe Arg("bool").withValue(
       dsl.instances.bool(bool)
     )
@@ -302,6 +319,11 @@ class ArgsSpec extends FlatSpec with Matchers {
     )
     args(27) shouldBe Arg("raw_bytes_fixed").withValue(
       dsl.instances.bytesFixedLength(address)
+    )
+    args(28) shouldBe Arg("public_key_ed25519").withValue(
+      dsl.instances.publicKey(
+        state.PublicKey().withEd25519(state.Ed25519().withPublicKey(ByteString.copyFrom(address)))
+      )
     )
   }
 

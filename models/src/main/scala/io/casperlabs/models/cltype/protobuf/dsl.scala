@@ -2,24 +2,25 @@ package io.casperlabs.models.cltype.protobuf
 
 import cats.syntax.option._
 import com.google.protobuf.ByteString
-import io.casperlabs.casper.consensus.state.{CLType, CLValueInstance, Key, Unit}
+import io.casperlabs.casper.consensus.state.{CLType, CLValueInstance, Key, PublicKey, Unit}
 
 object dsl {
 
   object types {
-    val bool: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.BOOL))
-    val i32: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.I32))
-    val i64: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.I64))
-    val u8: CLType     = CLType(CLType.Variants.SimpleType(CLType.Simple.U8))
-    val u32: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.U32))
-    val u64: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.U64))
-    val u128: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.U128))
-    val u256: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.U256))
-    val u512: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.U512))
-    val unit: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.UNIT))
-    val string: CLType = CLType(CLType.Variants.SimpleType(CLType.Simple.STRING))
-    val key: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.KEY))
-    val uref: CLType   = CLType(CLType.Variants.SimpleType(CLType.Simple.UREF))
+    val bool: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.BOOL))
+    val i32: CLType       = CLType(CLType.Variants.SimpleType(CLType.Simple.I32))
+    val i64: CLType       = CLType(CLType.Variants.SimpleType(CLType.Simple.I64))
+    val u8: CLType        = CLType(CLType.Variants.SimpleType(CLType.Simple.U8))
+    val u32: CLType       = CLType(CLType.Variants.SimpleType(CLType.Simple.U32))
+    val u64: CLType       = CLType(CLType.Variants.SimpleType(CLType.Simple.U64))
+    val u128: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.U128))
+    val u256: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.U256))
+    val u512: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.U512))
+    val unit: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.UNIT))
+    val string: CLType    = CLType(CLType.Variants.SimpleType(CLType.Simple.STRING))
+    val key: CLType       = CLType(CLType.Variants.SimpleType(CLType.Simple.KEY))
+    val uref: CLType      = CLType(CLType.Variants.SimpleType(CLType.Simple.UREF))
+    val publicKey: CLType = CLType(CLType.Variants.SimpleType(CLType.Simple.PUBLICKEY))
 
     def option(inner: CLType): CLType =
       CLType(CLType.Variants.OptionType(CLType.OptionProto(inner.some)))
@@ -191,6 +192,11 @@ object dsl {
         CLValueInstance.Tuple3(Some(_1), Some(_2), Some(_3))
       )
     )
+
+    def publicKey(pk: PublicKey): CLValueInstance.Value = CLValueInstance.Value(
+      value = CLValueInstance.Value.Value.PublicKey(pk)
+    )
+
   }
 
   object instances {
@@ -380,6 +386,12 @@ object dsl {
         v3 <- _3.value
       } yield values.tuple3(v1, v2, v3)
     )
+
+    def publicKey(pk: PublicKey): CLValueInstance = CLValueInstance(
+      clType = types.publicKey.some,
+      value = values.publicKey(pk).some
+    )
+
   }
 
 }

@@ -459,6 +459,7 @@ package object types {
               case v: CLValueInstance.Tuple1    => v
               case v: CLValueInstance.Tuple2    => v
               case v: CLValueInstance.Tuple3    => v
+              case v: CLValueInstance.PublicKey => v
             }
         }
       )

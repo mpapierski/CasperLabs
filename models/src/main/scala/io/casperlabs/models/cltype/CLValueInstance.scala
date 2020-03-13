@@ -105,6 +105,8 @@ object CLValueInstance {
 
     case CLType.Any =>
       FromBytes.raise(FromBytes.Error.FormatException("Cannot instantiate CLType.Any"))
+
+    case CLType.PublicKey => cltype.PublicKey.deserializer.map(u => PublicKey(u))
   }
 
   case class Bool(value: Boolean) extends CLValueInstance {
@@ -261,6 +263,10 @@ object CLValueInstance {
     override val clType: CLType = CLType.Tuple3(_1.clType, _2.clType, _3.clType)
   }
 
+  case class PublicKey(pk: cltype.PublicKey) extends CLValueInstance {
+    override val clType: CLType = CLType.PublicKey;
+  }
+
   sealed trait Error
   object Error {
     case class TypeMismatch(valueType: CLType, targetType: CLType) extends Error
@@ -332,19 +338,20 @@ object CLValueInstance {
     instances match {
       case Nil => Right(acc)
 
-      case Bool(b) :: tail   => valueBytes(tail, acc ++ ToBytes.toBytes(b))
-      case I32(i) :: tail    => valueBytes(tail, acc ++ ToBytes.toBytes(i))
-      case I64(i) :: tail    => valueBytes(tail, acc ++ ToBytes.toBytes(i))
-      case U8(i) :: tail     => valueBytes(tail, acc ++ ToBytes.toBytes(i))
-      case U32(i) :: tail    => valueBytes(tail, acc ++ ToBytes.toBytes(i))
-      case U64(i) :: tail    => valueBytes(tail, acc ++ ToBytes.toBytes(i))
-      case U128(i) :: tail   => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
-      case U256(i) :: tail   => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
-      case U512(i) :: tail   => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
-      case Unit :: tail      => valueBytes(tail, acc ++ ToBytes.toBytes(()))
-      case String(s) :: tail => valueBytes(tail, acc ++ ToBytes.toBytes(s))
-      case Key(k) :: tail    => valueBytes(tail, acc ++ ToBytes.toBytes(k))
-      case URef(u) :: tail   => valueBytes(tail, acc ++ ToBytes.toBytes(u))
+      case Bool(b) :: tail              => valueBytes(tail, acc ++ ToBytes.toBytes(b))
+      case I32(i) :: tail               => valueBytes(tail, acc ++ ToBytes.toBytes(i))
+      case I64(i) :: tail               => valueBytes(tail, acc ++ ToBytes.toBytes(i))
+      case U8(i) :: tail                => valueBytes(tail, acc ++ ToBytes.toBytes(i))
+      case U32(i) :: tail               => valueBytes(tail, acc ++ ToBytes.toBytes(i))
+      case U64(i) :: tail               => valueBytes(tail, acc ++ ToBytes.toBytes(i))
+      case U128(i) :: tail              => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
+      case U256(i) :: tail              => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
+      case U512(i) :: tail              => valueBytes(tail, acc ++ ToBytes.toBytes(i.value))
+      case Unit :: tail                 => valueBytes(tail, acc ++ ToBytes.toBytes(()))
+      case String(s) :: tail            => valueBytes(tail, acc ++ ToBytes.toBytes(s))
+      case Key(k) :: tail               => valueBytes(tail, acc ++ ToBytes.toBytes(k))
+      case URef(u) :: tail              => valueBytes(tail, acc ++ ToBytes.toBytes(u))
+      case PublicKey(publicKey) :: tail => valueBytes(tail, acc ++ ToBytes.toBytes(publicKey))
 
       case Option(None, _) :: tail    => valueBytes(tail, acc :+ Constants.Option.NONE_TAG)
       case Option(Some(x), _) :: tail => valueBytes(x :: tail, acc :+ Constants.Option.SOME_TAG)
@@ -372,5 +379,6 @@ object CLValueInstance {
       case CLValueInstance.Tuple1(x) :: tail       => valueBytes(x :: tail, acc)
       case CLValueInstance.Tuple2(x, y) :: tail    => valueBytes(x :: y :: tail, acc)
       case CLValueInstance.Tuple3(x, y, z) :: tail => valueBytes(x :: y :: z :: tail, acc)
+
     }
 }

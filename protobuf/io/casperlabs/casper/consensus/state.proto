@@ -17,6 +17,7 @@ message CLType {
         STRING = 10;
         KEY = 11;
         UREF = 12;
+        PUBLICKEY = 13;
     }
 
     message Option {
@@ -110,6 +111,7 @@ message CLValueInstance {
             Tuple2 tuple2_value = 20;
             Tuple3 tuple3_value = 21;
             bytes bytes_value = 22; // convenience for representing List(U8) / FixedList(U8)
+            PublicKey public_key = 23;
         }
     }
 

@@ -44,6 +44,12 @@ object Mappings {
           )
     }
 
+  def fromProto(pk: state.PublicKey): Either[Error, PublicKey] =
+    pk.variant.value match {
+      case state.PublicKey.Variant.Ed25519(publicKey) =>
+        toByteArray32(publicKey.publicKey).map(PublicKey.ED25519.apply)
+    }
+
   def toProto(a: Account): state.Account = state.Account(
     publicKey = toProto(a.publicKey).some,
     mainPurse = toProto(Key.URef(a.mainPurse)).value.uref,
@@ -116,19 +122,20 @@ object Mappings {
   def toProto(t: CLType): state.CLType = toProtoLoop(t).run
 
   private def toProtoLoop(t: CLType): Trampoline[state.CLType] = t match {
-    case CLType.Bool   => Trampoline.done(dsl.types.bool)
-    case CLType.I32    => Trampoline.done(dsl.types.i32)
-    case CLType.I64    => Trampoline.done(dsl.types.i64)
-    case CLType.U8     => Trampoline.done(dsl.types.u8)
-    case CLType.U32    => Trampoline.done(dsl.types.u32)
-    case CLType.U64    => Trampoline.done(dsl.types.u64)
-    case CLType.U128   => Trampoline.done(dsl.types.u128)
-    case CLType.U256   => Trampoline.done(dsl.types.u256)
-    case CLType.U512   => Trampoline.done(dsl.types.u512)
-    case CLType.Unit   => Trampoline.done(dsl.types.unit)
-    case CLType.String => Trampoline.done(dsl.types.string)
-    case CLType.Key    => Trampoline.done(dsl.types.key)
-    case CLType.URef   => Trampoline.done(dsl.types.uref)
+    case CLType.Bool      => Trampoline.done(dsl.types.bool)
+    case CLType.I32       => Trampoline.done(dsl.types.i32)
+    case CLType.I64       => Trampoline.done(dsl.types.i64)
+    case CLType.U8        => Trampoline.done(dsl.types.u8)
+    case CLType.U32       => Trampoline.done(dsl.types.u32)
+    case CLType.U64       => Trampoline.done(dsl.types.u64)
+    case CLType.U128      => Trampoline.done(dsl.types.u128)
+    case CLType.U256      => Trampoline.done(dsl.types.u256)
+    case CLType.U512      => Trampoline.done(dsl.types.u512)
+    case CLType.Unit      => Trampoline.done(dsl.types.unit)
+    case CLType.String    => Trampoline.done(dsl.types.string)
+    case CLType.Key       => Trampoline.done(dsl.types.key)
+    case CLType.URef      => Trampoline.done(dsl.types.uref)
+    case CLType.PublicKey => Trampoline.done(dsl.types.publicKey)
 
     case CLType.Option(inner) =>
       Trampoline.defer(toProtoLoop(inner)).map(dsl.types.option)
@@ -181,19 +188,20 @@ object Mappings {
 
   private def toProtoValueLoop(v: CLValueInstance): Trampoline[state.CLValueInstance.Value] =
     v match {
-      case CLValueInstance.Bool(b)   => Trampoline.done(dsl.values.bool(b))
-      case CLValueInstance.I32(i)    => Trampoline.done(dsl.values.i32(i))
-      case CLValueInstance.I64(i)    => Trampoline.done(dsl.values.i64(i))
-      case CLValueInstance.U8(i)     => Trampoline.done(dsl.values.u8(i))
-      case CLValueInstance.U32(i)    => Trampoline.done(dsl.values.u32(i))
-      case CLValueInstance.U64(i)    => Trampoline.done(dsl.values.u64(i))
-      case CLValueInstance.U128(i)   => Trampoline.done(dsl.values.u128(i.value))
-      case CLValueInstance.U256(i)   => Trampoline.done(dsl.values.u256(i.value))
-      case CLValueInstance.U512(i)   => Trampoline.done(dsl.values.u512(i.value))
-      case CLValueInstance.Unit      => Trampoline.done(dsl.values.unit)
-      case CLValueInstance.String(s) => Trampoline.done(dsl.values.string(s))
-      case CLValueInstance.Key(k)    => Trampoline.done(dsl.values.key(toProto(k)))
-      case CLValueInstance.URef(u)   => Trampoline.done(dsl.values.uref(toProto(u)))
+      case CLValueInstance.Bool(b)       => Trampoline.done(dsl.values.bool(b))
+      case CLValueInstance.I32(i)        => Trampoline.done(dsl.values.i32(i))
+      case CLValueInstance.I64(i)        => Trampoline.done(dsl.values.i64(i))
+      case CLValueInstance.U8(i)         => Trampoline.done(dsl.values.u8(i))
+      case CLValueInstance.U32(i)        => Trampoline.done(dsl.values.u32(i))
+      case CLValueInstance.U64(i)        => Trampoline.done(dsl.values.u64(i))
+      case CLValueInstance.U128(i)       => Trampoline.done(dsl.values.u128(i.value))
+      case CLValueInstance.U256(i)       => Trampoline.done(dsl.values.u256(i.value))
+      case CLValueInstance.U512(i)       => Trampoline.done(dsl.values.u512(i.value))
+      case CLValueInstance.Unit          => Trampoline.done(dsl.values.unit)
+      case CLValueInstance.String(s)     => Trampoline.done(dsl.values.string(s))
+      case CLValueInstance.Key(k)        => Trampoline.done(dsl.values.key(toProto(k)))
+      case CLValueInstance.URef(u)       => Trampoline.done(dsl.values.uref(toProto(u)))
+      case CLValueInstance.PublicKey(pk) => Trampoline.done(dsl.values.publicKey(toProto(pk)))
 
       case CLValueInstance.Option(value, _) =>
         value.traverse(v => Trampoline.defer(toProtoValueLoop(v))).map(dsl.values.option)
@@ -329,7 +337,8 @@ object Mappings {
       pure(CLType.Key)
     case state.CLType(state.CLType.Variants.SimpleType(state.CLType.Simple.UREF)) =>
       pure(CLType.URef)
-
+    case state.CLType(state.CLType.Variants.SimpleType(state.CLType.Simple.PUBLICKEY)) =>
+      pure(CLType.PublicKey)
     case state.CLType(state.CLType.Variants.OptionType(state.CLType.OptionProto(innerProto))) =>
       innerProto match {
         case None    => raise(Error.MissingType)
@@ -433,6 +442,9 @@ object Mappings {
 
           case other => raise(Error.TypeMismatch(other, "List(U8) or FixedList(U8)"))
         }
+
+      case state.CLValueInstance.Value.Value.PublicKey(pk) =>
+        lift(fromProto(pk).map(CLValueInstance.PublicKey.apply))
 
       case state.CLValueInstance.Value.Value
             .OptionValue(state.CLValueInstance.OptionProto(innerProto)) =>

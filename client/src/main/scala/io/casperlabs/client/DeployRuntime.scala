@@ -97,18 +97,14 @@ object DeployRuntime {
     arg(name, cltype.protobuf.Mappings.toProto(cltype.CLValueInstance.U512(nn)))
   }
 
-  private def bytesArg(name: String, value: Array[Byte]) =
+  private def accountArg(name: String, value: PublicKey) =
     arg(
       name,
       cltype.protobuf.Mappings.toProto(
         cltype.CLValueInstance
-          .FixedList(
-            value.toSeq.map(cltype.CLValueInstance.U8.apply),
-            cltype.CLType.U8,
-            value.length
+          .PublicKey(
+            cltype.PublicKey.ED25519(cltype.ByteArray32.apply(value).get)
           )
-          .right
-          .get
       )
     )
 
@@ -355,7 +351,7 @@ object DeployRuntime {
       maybeEitherPublicKey = senderPublicKey.asRight[String].some,
       maybeEitherPrivateKey = senderPrivateKey.asRight[String].some,
       List(
-        bytesArg("account", recipientPublicKey),
+        accountArg("account", recipientPublicKey),
         bigIntArg("amount", amount)
       ),
       exit,

@@ -30,6 +30,7 @@ object CLType {
   case class Tuple2(t1: CLType, t2: CLType)             extends CLType
   case class Tuple3(t1: CLType, t2: CLType, t3: CLType) extends CLType
   case object Any                                       extends CLType
+  case object PublicKey                                 extends CLType
 
   // Type representing the list of things that need to be appended to the
   // serialized CLType (see `toBytesTailRec` below). The `Left` case represents the
@@ -45,19 +46,20 @@ object CLType {
 
     case Right(t) :: tail =>
       t match {
-        case Bool   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_BOOL)
-        case I32    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_I32)
-        case I64    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_I64)
-        case U8     => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U8)
-        case U32    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U32)
-        case U64    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U64)
-        case U128   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U128)
-        case U256   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U256)
-        case U512   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U512)
-        case Unit   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_UNIT)
-        case String => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_STRING)
-        case Key    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_KEY)
-        case URef   => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_UREF)
+        case Bool      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_BOOL)
+        case I32       => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_I32)
+        case I64       => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_I64)
+        case U8        => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U8)
+        case U32       => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U32)
+        case U64       => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U64)
+        case U128      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U128)
+        case U256      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U256)
+        case U512      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_U512)
+        case Unit      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_UNIT)
+        case String    => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_STRING)
+        case Key       => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_KEY)
+        case URef      => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_UREF)
+        case PublicKey => toBytesTailRec(tail, acc :+ CL_TYPE_TAG_PUBLICKEY)
 
         case Option(inner) => toBytesTailRec(Right(inner) :: tail, acc :+ CL_TYPE_TAG_OPTION)
 
@@ -141,6 +143,8 @@ object CLType {
 
       case tag if tag == CL_TYPE_TAG_ANY => FromBytes.pure(Any)
 
+      case tag if tag == CL_TYPE_TAG_PUBLICKEY => FromBytes.pure(PublicKey)
+
       case other => FromBytes.raise(FromBytes.Error.InvalidVariantTag(other, "CLType"))
     }
 
@@ -166,4 +170,5 @@ object CLType {
   val CL_TYPE_TAG_TUPLE2: Byte     = 19
   val CL_TYPE_TAG_TUPLE3: Byte     = 20
   val CL_TYPE_TAG_ANY: Byte        = 21
+  val CL_TYPE_TAG_PUBLICKEY: Byte  = 22
 }
