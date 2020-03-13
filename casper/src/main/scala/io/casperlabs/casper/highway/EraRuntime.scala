@@ -7,18 +7,23 @@ import cats.effect.{Clock, Concurrent, Sync}
 import cats.effect.concurrent.{Ref, Semaphore}
 import com.google.protobuf.ByteString
 import java.time.Instant
+
 import io.casperlabs.casper.consensus.{Block, BlockSummary, Era}
-import io.casperlabs.casper.util.DagOperations
+import io.casperlabs.casper.dag.DagOperations
+import io.casperlabs.casper.validation.Errors.ErrorMessageWrapper
 import io.casperlabs.catscontrib.{MakeSemaphore, MonadThrowable}
 import io.casperlabs.crypto.Keys.{PublicKey, PublicKeyBS}
 import io.casperlabs.models.Message
 import io.casperlabs.metrics.implicits._
 import io.casperlabs.metrics.Metrics
+import io.casperlabs.shared.Log
 import io.casperlabs.storage.BlockHash
 import io.casperlabs.storage.dag.{DagRepresentation, DagStorage, FinalityStorageReader}
 import io.casperlabs.storage.era.EraStorage
 import io.casperlabs.shared.SemaphoreMap
+
 import scala.util.Random
+import scala.util.control.NoStackTrace
 
 /** Class to encapsulate the message handling logic of messages in an era.
   *
@@ -37,7 +42,7 @@ import scala.util.Random
   *
   * This should make testing easier: the return values are not opaque.
   */
-class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: ForkChoice](
+class EraRuntime[F[_]: Sync: Clock: Metrics: Log: EraStorage: FinalityStorageReader: ForkChoice](
     conf: HighwayConf,
     val era: Era,
     leaderFunction: LeaderFunction,
@@ -158,7 +163,7 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
           else {
             ForkChoice[F]
               .fromKeyBlock(era.keyBlockHash)
-              .timerGauge("is_over_forkchoice")
+              .timerGauge("is_era_over_forkchoice")
               .flatMap { choice =>
                 choice.block.isSwitchBlock.ifM(
                   FinalityStorageReader[F].isFinalized(choice.block.messageHash),
@@ -195,9 +200,11 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
   private def ifCurrentRound(roundId: Ticks)(thunk: HWL[Unit]): HWL[Unit] =
     // It's okay not to send a response to a message where we *did* participate
     // in the round it belongs to, but we moved on to a newer round.
-    HighwayLog.liftF(currentTick.flatMap(roundBoundariesAt)) flatMap {
-      case (from, _) if from == roundId => thunk
-      case _                            => noop
+    HighwayLog.liftF(isCurrentRound(roundId)).ifM(thunk, noop)
+
+  private def isCurrentRound(roundId: Ticks): F[Boolean] =
+    currentTick.flatMap(roundBoundariesAt).map {
+      case (from, _) => from == roundId
     }
 
   /** Build a block or ballot unless the fork choice is at the moment not something
@@ -253,7 +260,8 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
               .timerGauge("create_response")
           }
       _ <- m.fold(noop) { msg =>
-            HighwayLog.tell[F](HighwayEvent.CreatedLambdaResponse(msg))
+            HighwayLog.tell[F](HighwayEvent.CreatedLambdaResponse(msg)) >>
+              recordJustificationsDistance(msg)
           }
     } yield ()
   }
@@ -309,6 +317,7 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
           }
       _ <- m.fold(noop) { msg =>
             HighwayLog.tell[F](HighwayEvent.CreatedLambdaMessage(msg)) >>
+              recordJustificationsDistance(msg) >>
               handleCriticalMessages(msg)
           }
     } yield ()
@@ -340,11 +349,33 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
               }
               .timerGauge("create_omega")
           }
-      _ <- m.fold(noop) { msg =>
-            HighwayLog.tell[F](HighwayEvent.CreatedOmegaMessage(msg))
-          }
+      _ <- m.fold(noop)(msg => {
+            recordJustificationsDistance(msg) >>
+              HighwayLog.tell[F](HighwayEvent.CreatedOmegaMessage(msg))
+          })
     } yield ()
   }
+
+  // Returns a map that represents number of msg justifications at their distance from the message.
+  // Distance is a difference of rounds between the message and cited message.
+  private def justificationsRoundsDistance(msg: Message): F[Map[Long, Int]] =
+    msg.justifications.toList
+      .traverse(j => dag.lookupUnsafe(j.latestBlockHash))
+      .map { justificationMessages =>
+        justificationMessages
+          .filter(_.eraId == msg.eraId)
+          .map(j => msg.jRank - j.jRank)
+          .groupBy(identity)
+          .mapValues(_.size)
+      }
+
+  private def recordJustificationsDistance(msg: Message): HWL[Unit] =
+    HighwayLog.liftF(justificationsRoundsDistance(msg).flatMap { distances =>
+      distances.toList.traverse {
+        case (rankDistance, count) =>
+          Metrics[F].record("justificationsJRankDistances", rankDistance, count.toLong)
+      }.void
+    })
 
   /** Trace the lineage of the switch block back to find a key block,
     * then the corresponding booking block.
@@ -508,7 +539,8 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
     */
   def handleMessage(message: ValidatedMessage): HWL[Unit] = {
     def check(ok: Boolean, error: String) =
-      if (ok) noop else MonadThrowable[HWL].raiseError[Unit](new IllegalStateException(error))
+      if (ok) noop
+      else MonadThrowable[HWL].raiseError[Unit](new IllegalStateException(error) with NoStackTrace)
 
     for {
       _ <- check(
@@ -527,6 +559,14 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
                       .liftF(message.isLambdaMessage)
                       .ifM(createLambdaResponse(mp, message), noop)
                   }
+              _ <- HighwayLog
+                    .liftF(isCurrentRound(Ticks(message.roundId)))
+                    .ifM(
+                      HighwayLog.liftF(Metrics[F].incrementCounter("incoming_same_round_message")),
+                      HighwayLog
+                        .liftF(Metrics[F].incrementCounter("incoming_different_round_message"))
+                    )
+                    .whenA(synced)
             } yield ()
           }
       _ <- handleCriticalMessages(message)
@@ -559,6 +599,9 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
             // it would be good if it was cached and updated only when new messages are added.
             isOverAtCurrent <- isEraOverAt(currentRoundId)
             isOverAtNext    <- isEraOverAt(nextRoundId)
+            _ <- Log[F]
+                  .info(s"No more rounds in ${era.keyBlockHash.show -> "era"}")
+                  .whenA(isOverAtNext)
           } yield {
             val omega = if (!isOverAtCurrent) {
               // Schedule the omega for whatever the current round is, don't bother
@@ -617,7 +660,9 @@ class EraRuntime[F[_]: Sync: Clock: Metrics: EraStorage: FinalityStorageReader: 
               // and not stop processing, so we'll need to return more detailed statuses from
               // validate to decide what to do, whether to react or not.
               MonadThrowable[F].raiseError[Unit](
-                new IllegalArgumentException(s"Could not validate block against era: $error")
+                new ErrorMessageWrapper(
+                  s"Could not validate block ${block.blockHash.show} against era ${era.keyBlockHash.show}: $error"
+                )
               ),
             _ => ().pure[F]
           )
@@ -640,7 +685,7 @@ object EraRuntime {
     bonds = genesis.getHeader.getState.bonds
   )
 
-  def fromGenesis[F[_]: Sync: MakeSemaphore: Clock: Metrics: DagStorage: EraStorage: FinalityStorageReader: ForkChoice](
+  def fromGenesis[F[_]: Sync: MakeSemaphore: Clock: Metrics: Log: DagStorage: EraStorage: FinalityStorageReader: ForkChoice](
       conf: HighwayConf,
       genesis: BlockSummary,
       maybeMessageProducer: Option[MessageProducer[F]],
@@ -652,7 +697,7 @@ object EraRuntime {
     fromEra[F](conf, era, maybeMessageProducer, initRoundExponent, isSynced, leaderSequencer)
   }
 
-  def fromEra[F[_]: Sync: MakeSemaphore: Clock: Metrics: DagStorage: EraStorage: FinalityStorageReader: ForkChoice](
+  def fromEra[F[_]: Sync: MakeSemaphore: Clock: Metrics: Log: DagStorage: EraStorage: FinalityStorageReader: ForkChoice](
       conf: HighwayConf,
       era: Era,
       maybeMessageProducer: Option[MessageProducer[F]],

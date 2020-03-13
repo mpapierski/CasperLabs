@@ -123,13 +123,17 @@ impl Weight {
 
 impl ToBytes for Weight {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        WEIGHT_SERIALIZED_LENGTH
     }
 }
 
 impl FromBytes for Weight {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (byte, rem): (u8, &[u8]) = FromBytes::from_bytes(bytes)?;
+        let (byte, rem) = u8::from_bytes(bytes)?;
         Ok((Weight::new(byte), rem))
     }
 }
@@ -188,13 +192,17 @@ impl Display for Ed25519 {
 
 impl ToBytes for Ed25519 {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        ToBytes::to_bytes(&self.0)
+        self.0.to_bytes()
+    }
+
+    fn serialized_length(&self) -> usize {
+        ED25519_SERIALIZED_LENGTH
     }
 }
 
 impl FromBytes for Ed25519 {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (bytes, rem): ([u8; 32], &[u8]) = FromBytes::from_bytes(bytes)?;
+        let (bytes, rem) = <[u8; 32]>::from_bytes(bytes)?;
         Ok((Ed25519::new(bytes), rem))
     }
 }
@@ -264,8 +272,12 @@ impl ToBytes for PublicKey {
         let PublicKey::Ed25519(ed25519) = self;
         let mut bytes = Vec::with_capacity(PUBLIC_KEY_SERIALIZED_MAX_LENGTH);
         bytes.push(PUBLIC_KEY_ED25519_ID);
-        bytes.extend(&ed25519.to_bytes()?);
+        bytes.append(&mut ed25519.to_bytes()?);
         Ok(bytes)
+    }
+
+    fn serialized_length(&self) -> usize {
+        PUBLIC_KEY_SERIALIZED_MAX_LENGTH
     }
 }
 

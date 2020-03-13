@@ -1,24 +1,26 @@
 package io.casperlabs.storage
 
+import java.util.concurrent.TimeUnit
+
+import cats.effect.Sync
+import cats.implicits._
+import doobie.util.transactor.Transactor
+import io.casperlabs.casper.consensus.info.{BlockInfo, DeployInfo}
+import io.casperlabs.casper.consensus.{Block, BlockSummary, Era}
+import io.casperlabs.catscontrib.MonadThrowable
+import io.casperlabs.metrics.Metrics
+import io.casperlabs.models.Message
+import io.casperlabs.shared.Time
+import io.casperlabs.storage.block.{BlockStorage, SQLiteBlockStorage}
+import io.casperlabs.storage.dag.DagRepresentation.Validator
+import io.casperlabs.storage.dag._
 import io.casperlabs.storage.deploy.{
   DeployStorage,
   DeployStorageReader,
   DeployStorageWriter,
   SQLiteDeployStorage
 }
-import cats.effect.Sync
-import cats.implicits._
-import doobie.util.transactor.Transactor
-import io.casperlabs.casper.consensus.info.{BlockInfo, DeployInfo}
-import io.casperlabs.casper.consensus.{Block, BlockSummary, Era}
-import io.casperlabs.metrics.Metrics
-import io.casperlabs.models.Message
-import io.casperlabs.shared.Time
-import io.casperlabs.storage.block.{BlockStorage, SQLiteBlockStorage}
-import io.casperlabs.storage.dag.DagRepresentation.Validator
-import io.casperlabs.storage.dag.{DagRepresentation, DagStorage, FinalityStorage, SQLiteDagStorage}
 import io.casperlabs.storage.era.{EraStorage, SQLiteEraStorage}
-import java.util.concurrent.TimeUnit
 import fs2._
 
 object SQLiteStorage {
@@ -28,6 +30,7 @@ object SQLiteStorage {
       with DeployStorage[F]
       with DagRepresentation[F]
       with FinalityStorage[F]
+      with AncestorsStorage[F]
       with EraStorage[F]
 
   def create[F[_]: Sync: Metrics: Time](
@@ -42,7 +45,10 @@ object SQLiteStorage {
       readXa = readXa,
       writeXa = writeXa,
       wrapBlockStorage = (_: BlockStorage[F]).pure[F],
-      wrapDagStorage = (_: DagStorage[F] with DagRepresentation[F] with FinalityStorage[F]).pure[F]
+      wrapDagStorage =
+        (_: DagStorage[F] with DagRepresentation[F] with FinalityStorage[F] with AncestorsStorage[
+          F
+        ]).pure[F]
     )
 
   def create[F[_]: Sync: Metrics: Time](
@@ -51,8 +57,12 @@ object SQLiteStorage {
       readXa: Transactor[F],
       writeXa: Transactor[F],
       wrapBlockStorage: BlockStorage[F] => F[BlockStorage[F]],
-      wrapDagStorage: DagStorage[F] with DagRepresentation[F] with FinalityStorage[F] => F[
-        DagStorage[F] with DagRepresentation[F] with FinalityStorage[F]
+      wrapDagStorage: DagStorage[F] with DagRepresentation[F] with FinalityStorage[F] with AncestorsStorage[
+        F
+      ] => F[
+        DagStorage[F] with DagRepresentation[F] with FinalityStorage[F] with AncestorsStorage[
+          F
+        ]
       ]
   ): F[CombinedStorage[F]] =
     for {
@@ -64,6 +74,7 @@ object SQLiteStorage {
       with DagStorage[F]
       with DeployStorage[F]
       with DagRepresentation[F]
+      with AncestorsStorage[F]
       with FinalityStorage[F]
       with EraStorage[F] {
 
@@ -93,10 +104,14 @@ object SQLiteStorage {
           _ <- blockStorage.close()
         } yield ()
 
-      override def get(blockHash: BlockHash): F[Option[BlockMsgWithTransform]] =
+      override def get(
+          blockHash: BlockHash
+      )(implicit dv: DeployInfo.View = DeployInfo.View.FULL): F[Option[BlockMsgWithTransform]] =
         blockStorage.get(blockHash)
 
-      override def getByPrefix(blockHashPrefix: String): F[Option[BlockMsgWithTransform]] =
+      override def getByPrefix(
+          blockHashPrefix: String
+      )(implicit dv: DeployInfo.View = DeployInfo.View.FULL): F[Option[BlockMsgWithTransform]] =
         blockStorage.getByPrefix(blockHashPrefix)
 
       override def isEmpty: F[Boolean] = blockStorage.isEmpty
@@ -150,14 +165,13 @@ object SQLiteStorage {
       override def topoSortTail(tailLength: Int): Stream[F, Vector[BlockInfo]] =
         dagStorage.topoSortTail(tailLength)
 
-      override def topoSortValidator(
+      override def getBlockInfosByValidator(
           validator: Validator,
-          blocksNum: Int,
-          endBlockNumber: Long
-      ) = dagStorage.topoSortValidator(validator, blocksNum, endBlockNumber)
-
-      override def topoSortTailValidator(validator: Validator, blocksNum: Int) =
-        dagStorage.topoSortTailValidator(validator, blocksNum)
+          limit: Int,
+          lastTimeStamp: Long,
+          lastBlockHash: BlockHash
+      ) =
+        dagStorage.getBlockInfosByValidator(validator, limit, lastTimeStamp, lastBlockHash)
 
       override def latestGlobal =
         dagStorage.getRepresentation.flatMap(_.latestGlobal)
@@ -180,5 +194,11 @@ object SQLiteStorage {
 
       override def isFinalized(block: BlockHash): F[Boolean] =
         dagStorage.isFinalized(block)
+
+      override implicit val MT: MonadThrowable[F] = Sync[F]
+
+      override def findAncestor(block: BlockHash, distance: Long) =
+        dagStorage.findAncestor(block, distance)
+
     }
 }

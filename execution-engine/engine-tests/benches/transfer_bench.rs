@@ -9,7 +9,7 @@ use engine_core::engine_state::EngineConfig;
 use engine_test_support::{
     internal::{
         DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, DEFAULT_GENESIS_CONFIG,
-        DEFAULT_PAYMENT, STANDARD_PAYMENT_CONTRACT,
+        DEFAULT_PAYMENT,
     },
     DEFAULT_ACCOUNT_ADDR,
 };
@@ -47,11 +47,8 @@ fn bootstrap(data_dir: &Path, accounts: &[PublicKey], amount: U512) -> LmdbWasmT
     )
     .build();
 
-    let engine_config = if cfg!(feature = "turbo") {
-        EngineConfig::new().with_turbo(true)
-    } else {
-        EngineConfig::new()
-    };
+    let engine_config =
+        EngineConfig::new().with_use_system_contracts(cfg!(feature = "use-system-contracts"));
 
     let mut builder = LmdbWasmTestBuilder::new_with_config(data_dir, engine_config);
 
@@ -135,7 +132,7 @@ fn transfer_to_account_multiple_deploys(
     for i in 0..TRANSFER_BATCH_SIZE {
         let deploy = DeployItemBuilder::default()
             .with_address(DEFAULT_ACCOUNT_ADDR)
-            .with_payment_code(STANDARD_PAYMENT_CONTRACT, (U512::from(PER_RUN_FUNDING),))
+            .with_empty_payment_bytes((U512::from(PER_RUN_FUNDING),))
             .with_session_code(
                 CONTRACT_TRANSFER_TO_EXISTING_ACCOUNT,
                 (account, U512::one()),
@@ -189,7 +186,7 @@ fn transfer_to_purse_multiple_deploys(
     for i in 0..TRANSFER_BATCH_SIZE {
         let deploy = DeployItemBuilder::default()
             .with_address(TARGET_ADDR)
-            .with_payment_code(STANDARD_PAYMENT_CONTRACT, (U512::from(PER_RUN_FUNDING),))
+            .with_empty_payment_bytes((U512::from(PER_RUN_FUNDING),))
             .with_session_code(CONTRACT_TRANSFER_TO_PURSE, (purse, U512::one()))
             .with_authorization_keys(&[TARGET_ADDR])
             .with_deploy_hash(make_deploy_hash(i)) // deploy_hash

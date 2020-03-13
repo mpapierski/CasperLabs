@@ -219,10 +219,12 @@ trait ArbitraryConsensus {
         deploy  <- arbitrary[Deploy]
         isError <- arbitrary[Boolean]
         cost    <- arbitrary[Long]
+        stage   <- Gen.choose(0, 5)
       } yield {
         Block
           .ProcessedDeploy()
           .withDeploy(deploy)
+          .withStage(stage)
           .withCost(cost)
           .withIsError(isError)
           .withErrorMessage(if (isError) "Kaboom!" else "")
@@ -265,6 +267,7 @@ trait ArbitraryConsensus {
               )
             })
             .withJRank(parents.map(_.jRank).max + 1)
+            .withMainRank(parents.head.mainRank + 1)
           block.withHeader(header)
         }
 
@@ -293,6 +296,9 @@ trait ArbitraryConsensus {
         .update(_.header.parentHashes := Seq.empty)
         .update(_.header.justifications := Seq.empty)
         .update(_.header.jRank := 0)
+        .update(_.header.mainRank := 0)
+        .update(_.header.validatorPublicKey := ByteString.EMPTY)
+        .clearSignature
     } flatMap { genesis =>
       loop(Vector(genesis), Set(genesis))
     }

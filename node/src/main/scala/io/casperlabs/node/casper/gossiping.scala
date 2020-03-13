@@ -6,54 +6,41 @@ import cats._
 import cats.data.NonEmptyList
 import cats.effect._
 import cats.effect.implicits._
-import cats.effect.concurrent._
 import cats.implicits._
 import com.google.protobuf.ByteString
 import eu.timepit.refined.auto._
-import io.casperlabs.casper.Estimator.BlockHash
+import fs2.interop.reactivestreams._
 import io.casperlabs.casper._
 import io.casperlabs.casper.consensus._
 import io.casperlabs.casper.consensus.info.DeployInfo
-import io.casperlabs.casper.util.{CasperLabsProtocol, ProtoUtil}
+import io.casperlabs.casper.util.CasperLabsProtocol
 import io.casperlabs.casper.validation.Validation
-import io.casperlabs.catscontrib.MonadThrowable
 import io.casperlabs.comm.ServiceError.{InvalidArgument, Unavailable}
 import io.casperlabs.comm.discovery.NodeUtils._
 import io.casperlabs.comm.discovery.{Node, NodeDiscovery}
 import io.casperlabs.comm.gossiping._
-import io.casperlabs.comm.gossiping.synchronization.{
-  InitialSynchronization,
-  InitialSynchronizationBackwardImpl,
-  InitialSynchronizationForwardImpl,
-  StashingSynchronizer,
-  Synchronizer,
-  SynchronizerImpl
-}
+import io.casperlabs.comm.gossiping.synchronization._
 import io.casperlabs.comm.grpc._
 import io.casperlabs.comm.{CachedConnections, NodeAsk}
-import io.casperlabs.crypto.Keys
 import io.casperlabs.crypto.Keys.PublicKey
 import io.casperlabs.crypto.codec.Base16
-import io.casperlabs.ipc
-import io.casperlabs.ipc.ChainSpec
 import io.casperlabs.metrics.Metrics
-import io.casperlabs.models.BlockImplicits._
-import io.casperlabs.node.configuration.Configuration
 import io.casperlabs.node.casper.consensus.Consensus
-import io.casperlabs.shared.{Cell, FatalError, Log, Time}
+import io.casperlabs.node.configuration.Configuration
+import io.casperlabs.shared.{Log, Time}
 import io.casperlabs.storage.block._
 import io.casperlabs.storage.dag._
 import io.casperlabs.storage.deploy.DeployStorage
-import io.grpc.{ManagedChannel, Server}
 import io.grpc.netty.{NegotiationType, NettyChannelBuilder}
+import io.grpc.{ManagedChannel, Server}
 import io.netty.handler.ssl.{ClientAuth, SslContext}
-import fs2.interop.reactivestreams._
 import monix.eval.TaskLike
 import monix.execution.Scheduler
 import monix.tail.Iterant
+
 import scala.concurrent.duration._
 import scala.util.Random
-import scala.util.control.{NoStackTrace, NonFatal}
+import scala.util.control.NonFatal
 
 /** Create the Casper stack using the GossipService. */
 package object gossiping {
@@ -61,7 +48,7 @@ package object gossiping {
   private implicit val metricsSource: Metrics.Source =
     Metrics.Source(Metrics.Source(Metrics.BaseSource, "node"), "gossiping")
 
-  def apply[F[_]: Parallel: ConcurrentEffect: Log: Metrics: Time: Timer: BlockStorage: DagStorage: DeployStorage: NodeDiscovery: NodeAsk: Validation: CasperLabsProtocol: Consensus](
+  def apply[F[_]: Parallel: ConcurrentEffect: Log: Metrics: Time: Timer: BlockStorage: DagStorage: DeployStorage: NodeDiscovery: NodeAsk: CasperLabsProtocol: Consensus](
       port: Int,
       conf: Configuration,
       maybeValidatorId: Option[ValidatorIdentity],
@@ -111,8 +98,7 @@ package object gossiping {
 
       synchronizer <- makeSynchronizer(
                        conf,
-                       connectToGossip,
-                       genesis.getHeader.chainName
+                       connectToGossip
                      )
 
       downloadManager <- makeDownloadManager(
@@ -445,10 +431,9 @@ package object gossiping {
   private def show(hash: ByteString) =
     PrettyPrinter.buildString(hash)
 
-  def makeSynchronizer[F[_]: Concurrent: Parallel: Log: Metrics: DagStorage: Validation: CasperLabsProtocol](
+  def makeSynchronizer[F[_]: Concurrent: Parallel: Log: Metrics: DagStorage: Consensus: CasperLabsProtocol](
       conf: Configuration,
-      connectToGossip: GossipService.Connector[F],
-      chainName: String
+      connectToGossip: GossipService.Connector[F]
   ): Resource[F, Synchronizer[F]] = Resource.liftF {
     for {
       _ <- SynchronizerImpl.establishMetrics[F]
@@ -463,7 +448,7 @@ package object gossiping {
                            } yield latest.values.flatten.toList
 
                          override def validate(blockSummary: BlockSummary): F[Unit] =
-                           Validation[F].blockSummary(blockSummary, chainName)
+                           Consensus[F].validateSummary(blockSummary)
 
                          override def notInDag(blockHash: ByteString): F[Boolean] =
                            isInDag(blockHash).map(!_)
@@ -471,7 +456,8 @@ package object gossiping {
                        maxPossibleDepth = conf.server.syncMaxPossibleDepth,
                        minBlockCountToCheckWidth = conf.server.syncMinBlockCountToCheckWidth,
                        maxBondingRate = conf.server.syncMaxBondingRate,
-                       maxDepthAncestorsRequest = conf.server.syncMaxDepthAncestorsRequest
+                       maxDepthAncestorsRequest = conf.server.syncMaxDepthAncestorsRequest,
+                       disableValidations = conf.server.syncDisableValidations
                      )
     } yield synchronizer
   }
@@ -500,9 +486,15 @@ package object gossiping {
                       BlockStorage[F]
                         .getBlockSummary(blockHash)
 
-                    override def getBlock(blockHash: ByteString): F[Option[Block]] =
+                    override def getBlock(
+                        blockHash: ByteString,
+                        deploysBodiesExcluded: Boolean
+                    ): F[Option[Block]] =
                       BlockStorage[F]
-                        .get(blockHash)
+                        .get(blockHash)(
+                          if (deploysBodiesExcluded) DeployInfo.View.BASIC
+                          else DeployInfo.View.FULL
+                        )
                         .map(_.map(_.getBlockMessage))
 
                     override def getDeploys(deployHashes: Set[ByteString]): Iterant[F, Deploy] =

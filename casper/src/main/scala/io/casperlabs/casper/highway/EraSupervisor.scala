@@ -6,7 +6,8 @@ import cats.syntax.show
 import cats.effect.{Concurrent, Fiber, Resource, Sync, Timer}
 import cats.effect.concurrent.{Ref, Semaphore}
 import io.casperlabs.casper.consensus.{Block, BlockSummary, Era}
-import io.casperlabs.casper.util.DagOperations, DagOperations.Key
+import io.casperlabs.casper.dag.DagOperations
+import io.casperlabs.casper.dag.DagOperations.Key
 import io.casperlabs.casper.highway.EraRuntime.Agenda
 import io.casperlabs.comm.gossiping.Relaying
 import io.casperlabs.metrics.Metrics
@@ -17,6 +18,7 @@ import io.casperlabs.storage.BlockHash
 import io.casperlabs.storage.block.BlockStorage
 import io.casperlabs.storage.dag.{DagRepresentation, DagStorage, FinalityStorageReader}
 import io.casperlabs.storage.era.EraStorage
+
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
@@ -146,14 +148,23 @@ class EraSupervisor[F[_]: Concurrent: Timer: Log: Metrics: EraStorage: Relaying:
                                            .handleAgenda(action)
                                            .run
                                            .timerGauge("schedule_handleAgenda")
-                      _ <- scheduleRef.update(_ - key)
+
+                      isScheduleEmpty <- scheduleRef.modify { sch =>
+                                          val rem = sch - key
+                                          rem -> rem.isEmpty
+                                        }
+                      _ <- Log[F]
+                            .warn(s"There are no more actions scheduled for any of the active eras")
+                            .whenA(isScheduleEmpty && agenda.isEmpty)
+
                       _ <- schedule(runtime, agenda)
                       _ <- handleEvents(events).timerGauge("schedule_handleEvents")
                     } yield ()
 
                     exec.recoverWith {
                       case NonFatal(ex) =>
-                        Log[F].error(s"Error executing $action in $era: $ex")
+                        Metrics[F].incrementCounter("schedule_errors") *>
+                          Log[F].error(s"Error executing $action in $era: $ex")
                     }
                   }
           _ <- scheduleRef.update { s =>
@@ -169,10 +180,11 @@ class EraSupervisor[F[_]: Concurrent: Timer: Log: Metrics: EraStorage: Relaying:
     for {
       now   <- Timer[F].clock.realTime(conf.tickUnit)
       delay = math.max(ticks - now, 0L)
+      delayedF = Timer[F].sleep(FiniteDuration(delay, conf.tickUnit)) >> effect.onError {
+        case NonFatal(ex) => Log[F].error(s"Error executing fiber: $ex")
+      }
       fiber <- Concurrent[F].start {
-                Timer[F].sleep(FiniteDuration(delay, conf.tickUnit)) >> effect.onError {
-                  case NonFatal(ex) => Log[F].error(s"Error executing fiber: $ex")
-                }
+                Metrics[F].gauge("scheduled_items")(delayedF)
               }
     } yield fiber
 
@@ -185,12 +197,13 @@ class EraSupervisor[F[_]: Concurrent: Timer: Log: Metrics: EraStorage: Relaying:
             )
         _ <- messageExecutor
               .effectsAfterAdded(Validated(message))
-              .timerGauge("created_effectsAfterAdded")
+              .timerGauge(s"created_${kind}_effectsAfterAdded")
         _ <- Relaying[F]
               .relay(List(message.messageHash))
-              .timerGauge("created_relay")
+              .timerGauge(s"created_${kind}_relay")
         _ <- propagateLatestMessageToDescendantEras(message)
-              .timerGauge("created_propagateLatestMessage")
+              .timerGauge(s"created_${kind}_propagateLatestMessage")
+        _ <- Metrics[F].incrementCounter(s"created_$kind")
       } yield ()
 
     events.traverse {
@@ -306,6 +319,7 @@ object EraSupervisor {
         _ <- activeEras.traverse {
               case (runtime, agenda) => supervisor.start(runtime, agenda)
             }
+        _ <- Log[F].warn("There are no active eras!").whenA(activeEras.isEmpty)
       } yield supervisor
     }(_.shutdown())
 

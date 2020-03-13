@@ -9,34 +9,30 @@ import com.github.ghik.silencer.silent
 import com.google.protobuf.ByteString
 import fs2.interop.reactivestreams._
 import io.casperlabs.casper
-import io.casperlabs.casper.Estimator.BlockHash
-import io.casperlabs.casper.consensus.{Block, BlockSummary, Deploy}
-import io.casperlabs.casper.consensus.info.DeployInfo
 import io.casperlabs.casper.MultiParentCasperImpl.Broadcaster
+import io.casperlabs.casper.consensus.info.DeployInfo
+import io.casperlabs.casper.consensus.{Block, BlockSummary, Deploy}
 import io.casperlabs.casper.finality.MultiParentFinalizer
 import io.casperlabs.casper.finality.votingmatrix.FinalityDetectorVotingMatrix
-import io.casperlabs.casper.validation.Validation
-import io.casperlabs.casper.{DeriveValidation, consensus, _}
+import io.casperlabs.casper.mocks.MockFinalityStorage
+import io.casperlabs.casper.validation.{NCBValidationImpl, Validation}
+import io.casperlabs.casper.{consensus, _}
 import io.casperlabs.comm.discovery.{Node, NodeDiscovery, NodeIdentifier}
 import io.casperlabs.comm.gossiping._
 import io.casperlabs.comm.gossiping.synchronization._
 import io.casperlabs.crypto.Keys.PrivateKey
-import io.casperlabs.ipc.TransformEntry
 import io.casperlabs.mempool.DeployBuffer
 import io.casperlabs.metrics.Metrics
 import io.casperlabs.p2p.EffectsTestInstances._
-import io.casperlabs.shared.{Cell, Log, SemaphoreMap, Time}
+import io.casperlabs.shared._
 import io.casperlabs.storage.block._
 import io.casperlabs.storage.dag._
 import io.casperlabs.storage.deploy.DeployStorage
-import monix.tail.Iterant
 import logstage.LogIO
-import io.casperlabs.shared.LogStub
+import monix.tail.Iterant
 
 import scala.collection.immutable.Queue
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
-import io.casperlabs.casper.mocks.MockFinalityStorage
+import scala.concurrent.duration.{FiniteDuration, _}
 
 @silent("is never used")
 class GossipServiceCasperTestNode[F[_]](
@@ -82,9 +78,9 @@ class GossipServiceCasperTestNode[F[_]](
   implicit val raiseInvalidBlock      = casper.validation.raiseValidateErrorThroughApplicativeError[F]
   implicit val broadcaster: Broadcaster[F] =
     Broadcaster.fromGossipServices(Some(validatorId), relaying)
-  implicit val deploySelection   = DeploySelection.create[F](5 * 1024 * 1024)
-  implicit val derivedValidation = DeriveValidation.deriveValidationImpl[F]
-  implicit val eventEmitter      = NoOpsEventEmitter.create[F]
+  implicit val deploySelection = DeploySelection.create[F](5 * 1024 * 1024)
+  implicit val validationEff   = new NCBValidationImpl[F]
+  implicit val eventEmitter    = NoOpsEventEmitter.create[F]
 
   // `addBlock` called in many ways:
   // - test proposes a block on the node that created it
@@ -118,8 +114,6 @@ class GossipServiceCasperTestNode[F[_]](
 }
 
 trait GossipServiceCasperTestNodeFactory extends HashSetCasperTestNodeFactory {
-  import DeriveValidation._
-
   type TestNode[F[_]] = GossipServiceCasperTestNode[F]
 
   import GossipServiceCasperTestNodeFactory._
@@ -146,6 +140,7 @@ trait GossipServiceCasperTestNodeFactory extends HashSetCasperTestNodeFactory {
     implicit val nodeAsk   = makeNodeAsk(identity)(concurrentEffectF)
     implicit val functorRaiseInvalidBlock =
       casper.validation.raiseValidateErrorThroughApplicativeError[F]
+    implicit val validationEff = new NCBValidationImpl[F]
 
     // Standalone, so nobody to relay to.
     val relaying = RelayingImpl(
@@ -170,7 +165,12 @@ trait GossipServiceCasperTestNodeFactory extends HashSetCasperTestNodeFactory {
           dag          <- dagStorage.getRepresentation
           _            <- blockStorage.put(genesis.blockHash, genesis, Map.empty)
           finalityDetector <- FinalityDetectorVotingMatrix
-                               .of[F](dag, genesis.blockHash, faultToleranceThreshold)
+                               .of[F](
+                                 dag,
+                                 genesis.blockHash,
+                                 faultToleranceThreshold,
+                                 isHighway = false
+                               )
           implicit0(fs: FinalityStorage[F]) <- MockFinalityStorage[F](genesis.blockHash)
           multiParentFinalizer <- MultiParentFinalizer.create(
                                    dag,
@@ -238,6 +238,7 @@ trait GossipServiceCasperTestNodeFactory extends HashSetCasperTestNodeFactory {
           implicit val nodeAsk   = makeNodeAsk(peer)(concurrentEffectF)
           implicit val functorRaiseInvalidBlock =
             casper.validation.raiseValidateErrorThroughApplicativeError[F]
+          implicit val validationEff = new NCBValidationImpl[F]
 
           val gossipService = new TestGossipService[F]()
           gossipServices += peer -> gossipService
@@ -267,11 +268,12 @@ trait GossipServiceCasperTestNodeFactory extends HashSetCasperTestNodeFactory {
                 casperState <- Cell.mvarCell[F, CasperState](
                                 CasperState()
                               )
-                semaphoreMap                      <- SemaphoreMap[F, ByteString](1)
-                semaphore                         <- Semaphore[F](1)
-                _                                 <- blockStorage.put(genesis.blockHash, genesis, Map.empty)
-                dag                               <- dagStorage.getRepresentation
-                finalityDetector                  <- FinalityDetectorVotingMatrix.of[F](dag, genesis.blockHash, 0.1)
+                semaphoreMap <- SemaphoreMap[F, ByteString](1)
+                semaphore    <- Semaphore[F](1)
+                _            <- blockStorage.put(genesis.blockHash, genesis, Map.empty)
+                dag          <- dagStorage.getRepresentation
+                finalityDetector <- FinalityDetectorVotingMatrix
+                                     .of[F](dag, genesis.blockHash, 0.1, isHighway = false)
                 implicit0(fs: FinalityStorage[F]) <- MockFinalityStorage[F](genesis.blockHash)
                 multiParentFinalizer <- MultiParentFinalizer.create(
                                          dag,
@@ -466,7 +468,8 @@ object GossipServiceCasperTestNodeFactory {
                          maxPossibleDepth = Int.MaxValue,
                          minBlockCountToCheckWidth = Int.MaxValue,
                          maxBondingRate = 1.0,
-                         maxDepthAncestorsRequest = 1 // Just so we don't see the full DAG being synced all the time. We should have justifications for early stop.
+                         maxDepthAncestorsRequest = 1, // Just so we don't see the full DAG being synced all the time. We should have justifications for early stop.
+                         disableValidations = false    // See any problems in testing.
                        )
 
         server <- GossipServiceServer[F](
@@ -481,7 +484,10 @@ object GossipServiceCasperTestNodeFactory {
                          s"Retrieving block summary ${PrettyPrinter.buildString(blockHash) -> "block" -> null} from storage."
                        ) *> blockStorage.getBlockSummary(blockHash)
 
-                     override def getBlock(blockHash: ByteString): F[Option[consensus.Block]] =
+                     override def getBlock(
+                         blockHash: ByteString,
+                         deploysBodiesExcluded: Boolean
+                     ): F[Option[consensus.Block]] =
                        Log[F].debug(
                          s"Retrieving block ${PrettyPrinter.buildString(blockHash) -> "block" -> null} from storage."
                        ) *>
