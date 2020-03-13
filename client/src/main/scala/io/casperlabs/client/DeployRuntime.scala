@@ -355,7 +355,7 @@ object DeployRuntime {
       maybeEitherPublicKey = senderPublicKey.asRight[String].some,
       maybeEitherPrivateKey = senderPrivateKey.asRight[String].some,
       List(
-        accountArg("account", recipientPublicKey),
+        bytesArg("account", recipientPublicKey),
         bigIntArg("amount", amount)
       ),
       exit,

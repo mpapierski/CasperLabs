@@ -1,6 +1,6 @@
-package io.casperlabs.smartcontracts.cltype
+package io.casperlabs.models.cltype
 
-import io.casperlabs.smartcontracts.bytesrepr.SerializationTest.roundTrip
+import io.casperlabs.models.bytesrepr.SerializationTest.roundTrip
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest.prop.PropertyChecks

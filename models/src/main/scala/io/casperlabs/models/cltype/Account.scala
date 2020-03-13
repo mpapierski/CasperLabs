@@ -1,7 +1,7 @@
 package io.casperlabs.models.cltype
 
 import io.casperlabs.models.bytesrepr.{BytesView, FromBytes, ToBytes}
-import Account.{ActionThresholds, PublicKey, Weight}
+import Account.{ActionThresholds, Weight}
 
 case class Account(
     publicKey: PublicKey,

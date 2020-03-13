@@ -6,7 +6,7 @@ import io.casperlabs.crypto.codec._
 import io.casperlabs.ipc._
 import io.casperlabs.casper.consensus.state
 import io.casperlabs.casper.consensus.state._
-import io.casperlabs.smartcontracts.cltype
+import io.casperlabs.models.cltype
 
 object PrettyPrinter {
 

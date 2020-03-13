@@ -1,6 +1,6 @@
-package io.casperlabs.smartcontracts.cltype
+package io.casperlabs.models.cltype
 
-import io.casperlabs.smartcontracts.bytesrepr.{BytesView, FromBytes, ToBytes}
+import io.casperlabs.models.bytesrepr.{BytesView, FromBytes, ToBytes}
 
 sealed trait PublicKey
 
