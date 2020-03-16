@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-import struct
 import json
 from casperlabs_client.abi import ABI
-from casperlabs_client.abi import PublicKeyVariant
 
 
 account = bytes(range(32))
