@@ -1,6 +1,6 @@
 //! Contains types and constants associated with user accounts.
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 use core::{
     convert::TryFrom,
     fmt::{Debug, Display, Formatter},
@@ -257,7 +257,7 @@ impl Debug for PublicKey {
 
 impl CLTyped for PublicKey {
     fn cl_type() -> CLType {
-        CLType::List(Box::new(CLType::U8))
+        CLType::PublicKey
     }
 }
 

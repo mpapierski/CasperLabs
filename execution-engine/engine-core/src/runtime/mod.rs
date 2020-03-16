@@ -655,6 +655,13 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
                     Err(uref) => Ok(vec![uref]),
                 }
             }
+            (CLType::URef, CLType::PublicKey) => {
+                let res: Result<URef, PublicKey> = cl_value.to_owned().into_t()?;
+                match res {
+                    Ok(uref) => Ok(vec![uref]),
+                    Err(_) => Ok(vec![]),
+                }
+            }
             (CLType::Key, CLType::Bool) => {
                 let res: Result<Key, bool> = cl_value.to_owned().into_t()?;
                 match res {
@@ -900,6 +907,27 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
                     Err(key) => Ok(key.into_uref().into_iter().collect()),
                 }
             }
+            (CLType::PublicKey, CLType::URef) => {
+                let res: Result<PublicKey, URef> = cl_value.to_owned().into_t()?;
+                match res {
+                    Ok(_) => Ok(vec![]),
+                    Err(uref) => Ok(vec![uref]),
+                }
+            }
+            (CLType::PublicKey, CLType::Key) => {
+                let res: Result<PublicKey, Key> = cl_value.to_owned().into_t()?;
+                match res {
+                    Ok(_) => Ok(vec![]),
+                    Err(key) => Ok(key.into_uref().into_iter().collect()),
+                }
+            }
+            (CLType::Key, CLType::PublicKey) => {
+                let res: Result<Key, PublicKey> = cl_value.to_owned().into_t()?;
+                match res {
+                    Ok(key) => Ok(key.into_uref().into_iter().collect()),
+                    Err(_) => Ok(vec![]),
+                }
+            }
             (_, _) => Ok(vec![]),
         },
         CLType::Map { key, value } => match (&**key, &**value) {
@@ -958,6 +986,22 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
             (CLType::URef, CLType::URef) => {
                 let map: BTreeMap<URef, URef> = cl_value.to_owned().into_t()?;
                 Ok(map.keys().cloned().chain(map.values().cloned()).collect())
+            }
+            (CLType::URef, CLType::PublicKey) => {
+                let map: BTreeMap<URef, PublicKey> = cl_value.to_owned().into_t()?;
+                Ok(map.keys().cloned().collect())
+            }
+            (CLType::PublicKey, CLType::URef) => {
+                let map: BTreeMap<PublicKey, URef> = cl_value.to_owned().into_t()?;
+                Ok(map.values().cloned().collect())
+            }
+            (CLType::Key, CLType::PublicKey) => {
+                let map: BTreeMap<Key, PublicKey> = cl_value.to_owned().into_t()?;
+                Ok(map.keys().cloned().filter_map(Key::into_uref).collect())
+            }
+            (CLType::PublicKey, CLType::Key) => {
+                let map: BTreeMap<PublicKey, Key> = cl_value.to_owned().into_t()?;
+                Ok(map.values().cloned().filter_map(Key::into_uref).collect())
             }
             (CLType::Key, CLType::Bool) => {
                 let map: BTreeMap<Key, bool> = cl_value.to_owned().into_t()?;
@@ -1177,6 +1221,10 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
                 let val: (URef, URef) = cl_value.to_owned().into_t()?;
                 Ok(vec![val.0, val.1])
             }
+            (CLType::URef, CLType::PublicKey) => {
+                let val: (URef, PublicKey) = cl_value.to_owned().into_t()?;
+                Ok(vec![val.0])
+            }
             (CLType::Key, CLType::Bool) => {
                 let val: (Key, bool) = cl_value.to_owned().into_t()?;
                 Ok(val.0.into_uref().into_iter().collect())
@@ -1280,6 +1328,18 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
                 let val: (String, URef) = cl_value.to_owned().into_t()?;
                 Ok(vec![val.1])
             }
+            (CLType::PublicKey, CLType::URef) => {
+                let val: (String, URef) = cl_value.to_owned().into_t()?;
+                Ok(vec![val.1])
+            }
+            (CLType::Key, CLType::PublicKey) => {
+                let val: (Key, PublicKey) = cl_value.to_owned().into_t()?;
+                Ok(val.0.into_uref().into_iter().collect())
+            }
+            (CLType::PublicKey, CLType::Key) => {
+                let val: (PublicKey, Key) = cl_value.to_owned().into_t()?;
+                Ok(val.1.into_uref().into_iter().collect())
+            }
             (CLType::Bool, CLType::Key) => {
                 let val: (bool, Key) = cl_value.to_owned().into_t()?;
                 Ok(val.1.into_uref().into_iter().collect())
@@ -1336,6 +1396,7 @@ fn extract_urefs(cl_value: &CLValue) -> Result<Vec<URef>, Error> {
             let uref: URef = cl_value.to_owned().into_t()?; // TODO: optimize?
             Ok(vec![uref])
         }
+        CLType::PublicKey => Ok(vec![]),
     }
 }
 
@@ -2822,6 +2883,7 @@ mod tests {
                 | CLType::String
                 | CLType::Key
                 | CLType::URef
+                | CLType::PublicKey
                 | CLType::Option(_)
                 | CLType::List(_)
                 | CLType::FixedList(..)
@@ -2852,6 +2914,8 @@ mod tests {
             }),
             uref_arb().prop_map(|x| (CLValue::from_t(x).expect("should create CLValue"), vec![x])),
             ".*".prop_map(|x: String| (CLValue::from_t(x).expect("should create CLValue"), vec![])),
+            public_key_arb()
+                .prop_map(|x| (CLValue::from_t(x).expect("should create CLValue"), vec![])),
             option::of(any::<u64>())
                 .prop_map(|x| (CLValue::from_t(x).expect("should create CLValue"), vec![])),
             option::of(uref_arb()).prop_map(|x| {

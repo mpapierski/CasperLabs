@@ -8,11 +8,10 @@ from casperlabs_client.abi import PublicKeyVariant
 account = bytes(range(32))
 long_value = 123456
 big_int_value = 123456789012345678901234567890
-account_bytes = struct.pack("<B32s", PublicKeyVariant.ED25519.value, account)
 
 LEGACY_ARGS = [
     {"name": "amount", "value": {"long_value": str(long_value)}},
-    {"name": "account", "value": {"bytes_value": account_bytes.hex()}},
+    {"name": "account", "value": {"bytes_value": account.hex()}},
     {"name": "main_purse", "value": {"optional_value": {}}},
     {
         "name": "number",

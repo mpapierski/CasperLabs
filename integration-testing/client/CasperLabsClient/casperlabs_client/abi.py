@@ -59,12 +59,27 @@ class ABI:
         )
 
     @staticmethod
-    def account(name, a, variant=PublicKeyVariant.ED25519):
+    def account(name, a):
+        account_bytes = None
         if type(a) == bytes and len(a) == 32:
-            return ABI.bytes_value(name, a)
+            account_bytes = a
         if type(a) == str and len(a) == 64:
-            return ABI.bytes_value(name, bytes.fromhex(a))
-        raise Exception("account must be 32 bytes or 64 characters long string")
+            account_bytes = bytes.fromhex(a)
+
+        if account_bytes is None:
+            raise Exception("account must be 32 bytes or 64 characters long string")
+
+        return Arg(
+            name=name,
+            value=Instance(
+                cl_type=Type(simple_type=Type.Simple.PUBLICKEY),
+                value=Value(
+                    public_key=state.PublicKey(
+                        ed25519=state.Ed25519(public_key=account_bytes)
+                    )
+                ),
+            ),
+        )
 
     @staticmethod
     def int_value(name, i: int):

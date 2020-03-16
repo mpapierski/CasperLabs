@@ -285,18 +285,19 @@ object CLValueInstance {
   }
 
   implicit val order: Ordering[CLValueInstance] = Ordering.fromLessThan {
-    case (Bool(x), Bool(y))     => x < y
-    case (I32(x), I32(y))       => x < y
-    case (I64(x), I64(y))       => x < y
-    case (U8(x), U8(y))         => x < y
-    case (U32(x), U32(y))       => x < y
-    case (U64(x), U64(y))       => x < y
-    case (U128(x), U128(y))     => x.value < y.value
-    case (U256(x), U256(y))     => x.value < y.value
-    case (U512(x), U512(y))     => x.value < y.value
-    case (Unit, Unit)           => false // equal, not less than
-    case (String(x), String(y)) => x < y
-    case (URef(x), URef(y))     => cltype.URef.lt(x, y)
+    case (Bool(x), Bool(y))           => x < y
+    case (I32(x), I32(y))             => x < y
+    case (I64(x), I64(y))             => x < y
+    case (U8(x), U8(y))               => x < y
+    case (U32(x), U32(y))             => x < y
+    case (U64(x), U64(y))             => x < y
+    case (U128(x), U128(y))           => x.value < y.value
+    case (U256(x), U256(y))           => x.value < y.value
+    case (U512(x), U512(y))           => x.value < y.value
+    case (Unit, Unit)                 => false // equal, not less than
+    case (String(x), String(y))       => x < y
+    case (URef(x), URef(y))           => cltype.URef.lt(x, y)
+    case (PublicKey(x), PublicKey(y)) => cltype.PublicKey.lt(x, y)
 
     case (Key(cltype.Key.Hash(x)), Key(cltype.Key.Hash(y)))       => ByteArray32.lt(x, y)
     case (Key(cltype.Key.Account(x)), Key(cltype.Key.Account(y))) => ByteArray32.lt(x, y)

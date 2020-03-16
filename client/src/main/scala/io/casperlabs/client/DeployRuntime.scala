@@ -101,10 +101,9 @@ object DeployRuntime {
     arg(
       name,
       cltype.protobuf.Mappings.toProto(
-        cltype.CLValueInstance
-          .PublicKey(
-            cltype.PublicKey.ED25519(cltype.ByteArray32.apply(value).get)
-          )
+        cltype.CLValueInstance.PublicKey(
+          cltype.PublicKey.ED25519(cltype.ByteArray32.apply(value).get)
+        )
       )
     )
 

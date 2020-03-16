@@ -112,6 +112,7 @@ pub fn cl_value_arb() -> impl Strategy<Value = CLValue> {
             | CLType::String
             | CLType::Key
             | CLType::URef
+            | CLType::PublicKey
             | CLType::Option(_)
             | CLType::List(_)
             | CLType::FixedList(..)

@@ -493,6 +493,7 @@ where
                     let uref: URef = cl_value.to_owned().into_t()?; // TODO: optimize?
                     self.validate_uref(&uref)
                 }
+                CLType::PublicKey => Ok(()),
                 tuple @ CLType::Tuple2(_) if *tuple == types::named_key_type() => {
                     let (_name, key): (String, Key) = cl_value.to_owned().into_t()?; // TODO: optimize?
                     self.validate_key(&key)

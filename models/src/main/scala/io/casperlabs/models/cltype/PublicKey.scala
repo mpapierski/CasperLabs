@@ -11,6 +11,11 @@ object PublicKey {
     val tag: Byte = 0
   }
 
+  def lt(x: PublicKey, y: PublicKey): Boolean = (x, y) match {
+    case (ED25519(x), ED25519(y)) => ByteArray32.lt(x, y)
+    case (_, _)                   => false
+  }
+
   implicit val toBytesPublicKey: ToBytes[PublicKey] = new ToBytes[PublicKey] {
     override def toBytes(publicKey: PublicKey): Array[Byte] =
       publicKey match {
