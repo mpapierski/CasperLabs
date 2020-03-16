@@ -1,4 +1,3 @@
-import struct
 import json
 import base64
 from enum import Enum
