@@ -34,15 +34,15 @@ impl From<(EngineStateError, ExecutionEffect, Gas)> for DeployResult {
             | error @ EngineStateError::InvalidUpgradeConfig
             | error @ EngineStateError::WasmPreprocessing(_)
             | error @ EngineStateError::WasmSerialization(_)
-            | error @ EngineStateError::Exec(ExecutionError::DeploymentAuthorizationFailure)
+            | error @ EngineStateError::DeploymentAuthorizationFailure
             | error @ EngineStateError::Authorization => {
                 detail::precondition_error(error.to_string())
             }
             EngineStateError::Storage(storage_error) => {
-                detail::execution_error(storage_error, effect, cost)
+                detail::storage_error(storage_error, effect, cost)
             }
             EngineStateError::MissingSystemContract(msg) => {
-                detail::execution_error(msg, effect, cost)
+                detail::missing_system_contract(msg, effect, cost)
             }
             error @ EngineStateError::InsufficientPayment
             | error @ EngineStateError::Deploy
@@ -98,7 +98,7 @@ mod detail {
     /// Constructs an instance of `DeployResult` with no error set, i.e. a successful
     /// result.
     pub(super) fn execution_success(effect: ExecutionEffect, cost: Gas) -> DeployResult {
-        deploy_result(DeployErrorType::None, effect, cost)
+        make_deploy_result(effect, cost)
     }
 
     /// Constructs an instance of `DeployResult` with an error set to
@@ -116,42 +116,65 @@ mod detail {
         effect: ExecutionEffect,
         cost: Gas,
     ) -> DeployResult {
-        deploy_result(DeployErrorType::Exec(msg.to_string()), effect, cost)
+        let mut deploy_result = make_deploy_result(effect, cost);
+        deploy_result
+            .mut_execution_result()
+            .mut_error()
+            .mut_exec_error()
+            .set_message(msg.to_string());
+        deploy_result
     }
+
+    /// Constructs an instance of `DeployResult` with an error set to `StorageError`.
+    pub(super) fn storage_error<T: ToString>(
+        msg: T,
+        effect: ExecutionEffect,
+        cost: Gas,
+    ) -> DeployResult {
+        let mut deploy_result = make_deploy_result(effect, cost);
+        deploy_result
+            .mut_execution_result()
+            .mut_error()
+            .mut_storage_error()
+            .set_message(msg.to_string());
+        deploy_result
+    }
+
+    /// Constructs an instance of `DeployResult` with an error set to `MissingSystemContract`.
+    pub(super) fn missing_system_contract<T: ToString>(
+        msg: T,
+        effect: ExecutionEffect,
+        cost: Gas,
+    ) -> DeployResult {
+        let mut deploy_result = make_deploy_result(effect, cost);
+        deploy_result
+            .mut_execution_result()
+            .mut_error()
+            .mut_missing_system_contract()
+            .set_message(msg.to_string());
+        deploy_result
+    }
+
+
 
     /// Constructs an instance of `DeployResult` with an error set to
     /// `DeployError_OutOfGasError`.
     pub(super) fn out_of_gas_error(effect: ExecutionEffect, cost: Gas) -> DeployResult {
-        deploy_result(DeployErrorType::OutOfGas, effect, cost)
-    }
-
-    enum DeployErrorType {
-        None,
-        OutOfGas,
-        Exec(String),
+        let mut deploy_result = make_deploy_result(effect, cost);
+        deploy_result
+            .mut_execution_result()
+            .mut_error()
+            .set_gas_error(DeployError_OutOfGasError::new());
+        deploy_result
     }
 
     /// Constructs an instance of `DeployResult` with an error set to
     /// `DeployError_OutOfGasError` or `ProtobufExecutionError` or with no error set, depending on
     /// the value of `error_type`.
-    fn deploy_result(
-        error_type: DeployErrorType,
-        effect: ExecutionEffect,
-        cost: Gas,
-    ) -> DeployResult {
+    fn make_deploy_result(effect: ExecutionEffect, cost: Gas) -> DeployResult {
         let mut pb_deploy_result = DeployResult::new();
 
         let pb_execution_result = pb_deploy_result.mut_execution_result();
-        match error_type {
-            DeployErrorType::None => (),
-            DeployErrorType::OutOfGas => pb_execution_result
-                .mut_error()
-                .set_gas_error(DeployError_OutOfGasError::new()),
-            DeployErrorType::Exec(msg) => pb_execution_result
-                .mut_error()
-                .mut_exec_error()
-                .set_message(msg),
-        }
         pb_execution_result.set_effects(effect.into());
         pb_execution_result.set_cost(cost.value().into());
 

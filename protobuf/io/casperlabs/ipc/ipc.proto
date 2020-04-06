@@ -157,12 +157,22 @@ message DeployError {
 
     // Error during contract execution.
     message ExecutionError {
+        string message = 2; // temporary
+    }
+
+    message StorageError {
+        string message = 1;
+    }
+
+    message MissingSystemContract {
         string message = 1;
     }
 
     oneof value {
         OutOfGasError gas_error = 1;
         ExecutionError exec_error = 2;
+        StorageError storage_error = 3;
+        MissingSystemContract missing_system_contract = 4;
     }
 }
 

@@ -36,7 +36,6 @@ pub enum Error {
     UpdateKeyFailure(UpdateKeyFailure),
     SetThresholdFailure(SetThresholdFailure),
     SystemContract(system_contract_errors::Error),
-    DeploymentAuthorizationFailure,
     ExpectedReturnValue,
     UnexpectedReturnValue,
     InvalidContext,

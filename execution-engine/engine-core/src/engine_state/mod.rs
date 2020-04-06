@@ -1031,8 +1031,7 @@ where
         // validation_spec_4: deploy validity
         if !account.can_deploy_with(&authorization_keys) {
             return Ok(ExecutionResult::precondition_failure(
-                // TODO?:this doesn't happen in execution any longer, should error variant be moved
-                execution::Error::DeploymentAuthorizationFailure.into(),
+                crate::engine_state::error::Error::DeploymentAuthorizationFailure,
             ));
         }
 

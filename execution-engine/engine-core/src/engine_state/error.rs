@@ -32,6 +32,8 @@ pub enum Error {
     Deploy,
     #[fail(display = "Payment finalization error")]
     Finalization,
+    #[fail(display = "Deployment authorization failure")]
+    DeploymentAuthorizationFailure,
     #[fail(display = "Missing system contract association: {}", _0)]
     MissingSystemContract(String),
     #[fail(display = "Serialization error: {}", _0)]
