@@ -135,7 +135,7 @@ message DeployError {
 
     // Error during contract execution.
     message ExecutionError {
-        string message = 2; // temporary
+        string message = 1;
     }
 
     message StorageError {
