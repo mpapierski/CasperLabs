@@ -1,4 +1,4 @@
-use engine_core::{engine_state, execution};
+use engine_core::engine_state;
 use engine_test_support::{
     internal::{
         DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, DEFAULT_GENESIS_CONFIG,
@@ -200,7 +200,7 @@ fn should_raise_deploy_authorization_failure() {
         let message = format!("{}", deploy_result.error().unwrap());
         assert!(message.contains(&format!(
             "{}",
-            execution::Error::DeploymentAuthorizationFailure
+            engine_state::Error::DeploymentAuthorizationFailure
         )))
     }
     let exec_request_6 = {
@@ -247,7 +247,7 @@ fn should_raise_deploy_authorization_failure() {
         let message = format!("{}", deploy_result.error().unwrap());
         assert!(message.contains(&format!(
             "{}",
-            execution::Error::DeploymentAuthorizationFailure
+            engine_state::Error::DeploymentAuthorizationFailure
         )))
     }
 
@@ -390,6 +390,6 @@ fn should_not_authorize_deploy_with_duplicated_keys() {
     let message = format!("{}", deploy_result.error().unwrap());
     assert!(message.contains(&format!(
         "{}",
-        execution::Error::DeploymentAuthorizationFailure
+        engine_state::Error::DeploymentAuthorizationFailure
     )))
 }
