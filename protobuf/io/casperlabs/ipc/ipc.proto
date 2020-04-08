@@ -114,28 +114,6 @@ message AddOp {}
 message NoOp {}
 
 
-//Errors which may occur while interacting with global state
-message StorageError {
-    oneof error_instance {
-        BytesReprError bytes_repr = 1;
-        RkvError rkv = 2;
-    }
-}
-
-message BytesReprError {
-    oneof error_instance {
-        EarlyEndOfStream early_end = 1;
-        FormattingError formatting = 2;
-        LeftOverBytes left_over = 3;
-    }
-}
-message EarlyEndOfStream {}
-message FormattingError {}
-message LeftOverBytes {}
-message RkvError {
-    string error_msg = 1;
-}
-
 // Models key value pair of (key, op) entry.
 // Required b/c protobuff doesn't support maps natively
 message OpEntry {
