@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use engine_shared::{stored_value::StoredValue, transform::Transform};
 use engine_test_support::{
     internal::{ExecuteRequestBuilder, InMemoryWasmTestBuilder, DEFAULT_GENESIS_CONFIG},
@@ -37,10 +35,7 @@ fn should_run_local_state_contract() {
     let transforms = result.builder().get_transforms();
 
     let expected_local_key = Key::local(
-        DEFAULT_ACCOUNT_ADDR
-            .as_bytes()
-            .try_into()
-            .expect("should be 32 bytes"),
+        DEFAULT_ACCOUNT_ADDR.to_seed().value(),
         &[66u8; 32].to_bytes().unwrap(),
     );
 
@@ -91,10 +86,7 @@ fn should_add_to_local_state() {
     let transforms = result.builder().get_transforms();
 
     let expected_local_key = Key::local(
-        DEFAULT_ACCOUNT_ADDR
-            .as_bytes()
-            .try_into()
-            .expect("should be 32 bytes"),
+        DEFAULT_ACCOUNT_ADDR.to_seed().value(),
         &[66u8; 32].to_bytes().unwrap(),
     );
 

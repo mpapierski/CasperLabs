@@ -257,7 +257,7 @@ where
 
     pub fn seed(&self) -> [u8; KEY_LOCAL_SEED_LENGTH] {
         match self.base_key {
-            Key::Account(PublicKey::Ed25519(bytes)) => bytes.value(),
+            Key::Account(public_key) => public_key.to_seed().value(),
             Key::Hash(bytes) => bytes,
             Key::URef(uref) => uref.addr(),
             Key::Local { seed, .. } => seed,

@@ -143,6 +143,10 @@ impl CLTyped for Weight {
         CLType::U8
     }
 }
+
+/// The length in bytes of an address.
+const ADDRESS_LENGTH: usize = 32;
+
 /// The length in bytes of a [`PublicKey`].
 pub const ED25519_LENGTH: usize = 32;
 
@@ -154,6 +158,21 @@ pub const PUBLIC_KEY_SERIALIZED_MAX_LENGTH: usize = ED25519_SERIALIZED_LENGTH;
 
 /// A type alias for the raw bytes of an Ed25519 public key.
 pub type Ed25519Bytes = [u8; ED25519_LENGTH];
+
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
+#[doc(hidden)]
+pub struct Address([u8; ADDRESS_LENGTH]);
+
+impl Address {
+    fn raw_from_bytes(bytes: [u8; ADDRESS_LENGTH]) -> Address {
+        Address(bytes)
+    }
+
+    #[doc(hidden)]
+    pub fn value(self) -> [u8; ADDRESS_LENGTH] {
+        self.0
+    }
+}
 
 /// A newtype wrapping a [`Ed25519Bytes`] which is the raw bytes of
 /// the public key of an Ed25519 key pair.
@@ -174,6 +193,11 @@ impl Ed25519 {
     /// Returns the raw bytes of the public key as a `slice`.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    #[doc(hidden)]
+    pub fn to_seed(&self) -> Address {
+        Address::raw_from_bytes(self.0)
     }
 }
 
@@ -239,6 +263,13 @@ impl PublicKey {
     pub fn as_bytes(&self) -> &[u8] {
         let PublicKey::Ed25519(ed25519) = self;
         ed25519.as_bytes()
+    }
+
+    /// Returns derived [`Address`] for given public key.
+    #[doc(hidden)]
+    pub fn to_seed(&self) -> Address {
+        let PublicKey::Ed25519(ed25519) = self;
+        ed25519.to_seed()
     }
 }
 
